@@ -47,11 +47,12 @@ create table if not exists agent_tools (
 -- ===========================================
 create table if not exists documents (
   id uuid default gen_random_uuid() primary key,
-  agent_id uuid references agents(id) on delete cascade not null,
+  agent_id uuid references agents(id) on delete cascade, -- NULLABLE: null = global doc
   title text not null,
   content text not null,
   source_type text default 'manual',
   source_url text,
+  is_global boolean default false, -- true = available to all agents
   metadata jsonb default '{}',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -59,21 +60,20 @@ create table if not exists documents (
 create table if not exists document_chunks (
   id uuid default gen_random_uuid() primary key,
   document_id uuid references documents(id) on delete cascade not null,
-  agent_id uuid references agents(id) on delete cascade not null,
   content text not null,
   embedding vector(768), -- Gemini text-embedding-004
   metadata jsonb default '{}',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-create index on document_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+create index if not exists idx_document_chunks_embedding on document_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100);
 
 -- Buscador RAG
--- Buscador RAG (Actualizado con Logic Strict)
+-- Busca documentos relevantes: globales + asignados al agente + linked via agent_documents
 create or replace function match_documents(
   query_embedding vector(768),
   match_agent_id uuid,
-  match_threshold float default 0.7,
+  match_threshold float default 0.5,
   match_count int default 5
 )
 returns table (
@@ -85,9 +85,16 @@ language plpgsql
 as $$
 declare
   v_strict boolean;
+  v_rag_enabled boolean;
 begin
-  -- Check if agent is set to strict mode
-  select rag_strict into v_strict from agents where id = match_agent_id;
+  -- Check agent settings
+  select rag_enabled, rag_strict into v_rag_enabled, v_strict 
+  from agents where id = match_agent_id;
+  
+  -- If RAG not enabled, return empty
+  if v_rag_enabled is not true then
+    return;
+  end if;
 
   return query
   select
@@ -98,25 +105,21 @@ begin
   join documents on documents.id = document_chunks.document_id
   where 1 - (document_chunks.embedding <=> query_embedding) > match_threshold
   and (
-    -- If strict is FALSE (default), usually we search everything? 
-    -- User said "option to consult only inside that source". 
-    -- Implies usually it searches broadly? Or usually it searches "Assigned + Shared"?
-    -- Let's assume Global search if not strict.
-    (v_strict is not true)
-    OR
-    (
-        v_strict = true AND (
-            documents.agent_id = match_agent_id
-            OR
-            exists (select 1 from agent_documents where agent_id = match_agent_id and document_id = documents.id)
-        )
-    )
+    -- Strict mode: only docs assigned to this agent or linked
+    case when v_strict = true then
+      documents.agent_id = match_agent_id
+      OR exists (select 1 from agent_documents where agent_id = match_agent_id and document_id = documents.id)
+    -- Normal mode: global docs + assigned + linked
+    else
+      documents.is_global = true
+      OR documents.agent_id = match_agent_id
+      OR exists (select 1 from agent_documents where agent_id = match_agent_id and document_id = documents.id)
+    end
   )
   order by document_chunks.embedding <=> query_embedding
   limit match_count;
 end;
 $$;
-
 
 -- ===========================================
 -- NEW TABLES FOR CONFIGURATION
