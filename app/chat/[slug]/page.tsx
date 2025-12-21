@@ -158,26 +158,42 @@ export default function ChatPage() {
                 
                 const chunk = new TextDecoder().decode(value)
                 
-                // Vercel AI SDK Data Stream format handling
-                // The stream contains parts like 0:"text", e:{"usage":...}, etc.
-                const lines = chunk.split('\n').filter(line => line.trim())
-                for (const line of lines) {
-                    if (line.startsWith('0:')) {
-                        const text = JSON.parse(line.substring(2))
-                        botText += text
-                        
-                        // Update UI with partial text
-                        const partialHtml = await marked.parse(botText)
-                        setMessages(prev => {
-                            const last = prev[prev.length - 1]
-                            if (last?.role === 'assistant' && last.id === 'temp-bot') {
-                                return [...prev.slice(0, -1), { ...last, content: partialHtml, rawContent: botText }]
-                            } else {
-                                return [...prev, { id: 'temp-bot', role: 'assistant', content: partialHtml, rawContent: botText }]
+                // Check if it's Data Stream format (starts with 0:, 1:, etc.)
+                const isDataStream = chunk.match(/^[0-9a-z]:/m)
+
+                if (isDataStream) {
+                    // Vercel AI SDK Data Stream format handling
+                    const lines = chunk.split('\n').filter(line => line.trim())
+                    for (const line of lines) {
+                        const match = line.match(/^([0-9a-z]):(.*)$/)
+                        if (match) {
+                            const [_, type, content] = match
+                            if (type === '0') { // Text part
+                                try {
+                                    const text = JSON.parse(content)
+                                    botText += text
+                                } catch (e) {
+                                    // Fallback if JSON parse fails
+                                    botText += content.replace(/^"|"$/g, '')
+                                }
                             }
-                        })
+                        }
                     }
+                } else {
+                    // Raw text format
+                    botText += chunk
                 }
+
+                // Update UI with partial text
+                const partialHtml = await marked.parse(botText)
+                setMessages(prev => {
+                    const last = prev[prev.length - 1]
+                    if (last?.role === 'assistant' && last.id === 'temp-bot') {
+                        return [...prev.slice(0, -1), { ...last, content: partialHtml, rawContent: botText }]
+                    } else {
+                        return [...prev, { id: 'temp-bot', role: 'assistant', content: partialHtml, rawContent: botText }]
+                    }
+                })
             }
 
             // Final update to ensure everything is saved and marked as finished

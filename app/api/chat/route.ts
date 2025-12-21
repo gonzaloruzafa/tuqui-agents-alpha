@@ -77,6 +77,7 @@ export async function POST(req: Request) {
 
         // 5. Generate Stream
         try {
+            console.log('[Chat] Calling streamText with model: gemini-2.0-flash')
             const result = streamText({
                 model: google('gemini-2.0-flash'),
                 system: systemSystem,
@@ -90,20 +91,46 @@ export async function POST(req: Request) {
                     // 6. Async Billing Tracking (After processing)
                     try {
                         const { usage } = event
+                        console.log('[Chat] Stream finished. Usage:', usage)
                         if (usage) {
                             await trackUsage(tenantId, session.user.email!, usage.totalTokens || 0)
                         }
                     } catch (e) {
-                        console.error('Failed to track usage', e)
+                        console.error('[Chat] Failed to track usage:', e)
                     }
                 }
             })
 
-            console.log('[Chat] streamText called successfully')
-            return (result as any).toDataStreamResponse()
+            console.log('[Chat] streamText result keys:', Object.keys(result))
+            
+            // Check for available response methods
+            if (typeof (result as any).toDataStreamResponse === 'function') {
+                console.log('[Chat] Using toDataStreamResponse')
+                return (result as any).toDataStreamResponse()
+            } else if (typeof (result as any).toTextStreamResponse === 'function') {
+                console.log('[Chat] toDataStreamResponse missing, using toTextStreamResponse')
+                return (result as any).toTextStreamResponse()
+            } else if (typeof (result as any).toAIStreamResponse === 'function') {
+                console.log('[Chat] Using toAIStreamResponse')
+                return (result as any).toAIStreamResponse()
+            } else {
+                console.error('[Chat] No standard response method found on result. Available keys:', Object.keys(result))
+                // Fallback: try to create a response from the text stream if available
+                if ((result as any).textStream) {
+                    console.log('[Chat] Fallback: Creating response from textStream')
+                    return new Response((result as any).textStream, {
+                        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+                    })
+                }
+                throw new Error('AI SDK result missing response methods and textStream')
+            }
         } catch (streamError: any) {
-            console.error('[Chat] Error in streamText call:', streamError)
-            throw streamError
+            console.error('[Chat] Error in streamText execution:', streamError)
+            return new Response(JSON.stringify({ 
+                error: 'Error generating response', 
+                details: streamError.message,
+                stack: streamError.stack
+            }), { status: 500 })
         }
 
     } catch (error: any) {
