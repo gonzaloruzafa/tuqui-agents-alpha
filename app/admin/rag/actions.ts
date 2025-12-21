@@ -6,6 +6,41 @@ import { revalidatePath } from 'next/cache'
 import { chunkDocument } from '@/lib/rag/chunker'
 import { generateEmbeddings } from '@/lib/rag/embeddings'
 
+// Simple PDF text extraction without canvas dependencies
+async function extractPdfText(buffer: Buffer): Promise<string> {
+    // Use pdf-parse with render option disabled to avoid canvas
+    const pdfParse = (await import('pdf-parse')).default
+    
+    // Custom page render to avoid canvas issues
+    const options = {
+        // Return raw text without rendering
+        pagerender: function(pageData: any) {
+            return pageData.getTextContent().then(function(textContent: any) {
+                let text = ''
+                for (const item of textContent.items) {
+                    text += (item as any).str + ' '
+                }
+                return text
+            })
+        }
+    }
+    
+    try {
+        const data = await pdfParse(buffer, options)
+        return data.text
+    } catch (e) {
+        console.error('[RAG] pdf-parse error, trying fallback:', e)
+        // Fallback: basic text extraction from PDF buffer
+        const text = buffer.toString('utf-8')
+        // Extract readable text between stream markers
+        const matches = text.match(/\(([^)]+)\)/g)
+        if (matches) {
+            return matches.map(m => m.slice(1, -1)).join(' ')
+        }
+        throw new Error('Could not extract text from PDF')
+    }
+}
+
 export async function uploadDocument(formData: FormData) {
     const session = await auth()
     if (!session?.tenant?.id || !session.isAdmin) return { error: 'Unauthorized' }
@@ -22,15 +57,13 @@ export async function uploadDocument(formData: FormData) {
         if (file.type === 'application/pdf') {
             const arrayBuffer = await file.arrayBuffer()
             const buffer = Buffer.from(arrayBuffer)
-            const pdfParse = require('pdf-parse')
-            const data = await pdfParse(buffer)
-            content = data.text
+            content = await extractPdfText(buffer)
         } else {
             content = await file.text()
         }
     } catch (e) {
         console.error('[RAG] Error reading file:', e)
-        return { error: 'Error reading file' }
+        return { error: 'Error reading file. For PDFs, try converting to text first.' }
     }
 
     if (!content || content.trim().length < 50) {

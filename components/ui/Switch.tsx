@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 interface SwitchProps {
     name: string
     defaultChecked?: boolean
@@ -8,21 +10,30 @@ interface SwitchProps {
 }
 
 export function Switch({ name, defaultChecked = false, label, value }: SwitchProps) {
+    const [checked, setChecked] = useState(defaultChecked)
+
     return (
-        <label className="relative inline-flex items-center cursor-pointer select-none">
+        <label className="relative inline-flex items-center cursor-pointer select-none gap-3">
             <input
                 type="checkbox"
                 name={name}
                 className="sr-only peer"
-                defaultChecked={defaultChecked}
-                value={value}
+                checked={checked}
+                onChange={(e) => setChecked(e.target.checked)}
+                value={value || 'on'}
             />
-            <div className="
-                after:content-[''] after:absolute after:top-[2px] after:left-[2px] 
-                after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all 
-                peer-checked:bg-adhoc-violet
-            "></div>
-            {label && <span className="ml-3 text-sm font-medium text-gray-700">{label}</span>}
+            <div className={`
+                w-11 h-6 rounded-full transition-colors duration-200 ease-in-out
+                ${checked ? 'bg-adhoc-violet' : 'bg-gray-200'}
+                relative
+            `}>
+                <div className={`
+                    absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm
+                    transition-transform duration-200 ease-in-out
+                    ${checked ? 'translate-x-5' : 'translate-x-0'}
+                `} />
+            </div>
+            {label && <span className="text-sm font-medium text-gray-700">{label}</span>}
         </label>
     )
 }

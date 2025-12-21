@@ -23,10 +23,16 @@ export async function POST(req: Request) {
     const { agentSlug, messages, sessionId } = await req.json()
     const tenantId = session.tenant.id
 
+    // Validate messages
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        return new Response(JSON.stringify({ error: 'Messages array is required' }), { status: 400 })
+    }
+
     try {
         // 1. Billing Check (Before processing)
         // Estimate tokens: simplistic count (words * 1.3)
-        const inputContent = messages[messages.length - 1].content
+        const lastMessage = messages[messages.length - 1]
+        const inputContent = lastMessage?.content || ''
         const estimatedInputTokens = Math.ceil(inputContent.length / 3)
         await checkUsageLimit(tenantId, session.user.email, estimatedInputTokens)
 

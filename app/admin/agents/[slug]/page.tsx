@@ -109,11 +109,9 @@ export default async function AgentEditorPage({ params }: { params: Promise<{ sl
 
     // Tools hardcoded for alpha available choices
     const AVAILABLE_TOOLS = [
-        { slug: 'web_search', label: 'Búsqueda Web (Tavily)' },
-        { slug: 'odoo_search', label: 'Odoo - Búsqueda' },
-        { slug: 'odoo_analyze', label: 'Odoo - Análisis' },
-        { slug: 'meli_search', label: 'MercadoLibre - Búsqueda' },
-        { slug: 'meli_price_analysis', label: 'MercadoLibre - Análisis de Precios' }
+        { slug: 'web_search', label: 'Búsqueda Web (Tavily)', description: 'Buscar información actualizada en internet' },
+        { slug: 'odoo', label: 'Odoo ERP', description: 'Consultar ventas, contactos, productos del ERP' },
+        { slug: 'meli_search', label: 'MercadoLibre', description: 'Buscar productos y analizar precios en MELI' }
     ]
 
     return (
