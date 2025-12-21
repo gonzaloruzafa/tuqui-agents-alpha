@@ -29,5 +29,5 @@ export async function searchDocuments(
         return []
     }
 
-    return data as SearchResult[]
+    return (data as SearchResult[]) || []
 }

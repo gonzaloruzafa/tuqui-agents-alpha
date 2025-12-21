@@ -141,22 +141,51 @@ export default function ChatPage() {
                 })
             })
 
-            if (!response.ok) throw new Error('API Error')
-
-            const reader = response.body?.getReader()
-            let botText = ''
-
-            while (true) {
-                const { done, value } = await reader!.read()
-                if (done) break
-                const chunk = new TextDecoder().decode(value)
-                botText += chunk
-                // Streaming UI update could happen here
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}))
+                throw new Error(errorData.error || 'API Error')
             }
 
-            const htmlContent = await marked.parse(botText)
+            const reader = response.body?.getReader()
+            if (!reader) throw new Error('No reader available')
+            
+            let botText = ''
+            let isFirstChunk = true
 
-            setMessages(prev => [...prev, { id: Date.now(), role: 'assistant', content: htmlContent, rawContent: botText }])
+            while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                
+                const chunk = new TextDecoder().decode(value)
+                
+                // Vercel AI SDK Data Stream format handling
+                // The stream contains parts like 0:"text", e:{"usage":...}, etc.
+                const lines = chunk.split('\n').filter(line => line.trim())
+                for (const line of lines) {
+                    if (line.startsWith('0:')) {
+                        const text = JSON.parse(line.substring(2))
+                        botText += text
+                        
+                        // Update UI with partial text
+                        const partialHtml = await marked.parse(botText)
+                        setMessages(prev => {
+                            const last = prev[prev.length - 1]
+                            if (last?.role === 'assistant' && last.id === 'temp-bot') {
+                                return [...prev.slice(0, -1), { ...last, content: partialHtml, rawContent: botText }]
+                            } else {
+                                return [...prev, { id: 'temp-bot', role: 'assistant', content: partialHtml, rawContent: botText }]
+                            }
+                        })
+                    }
+                }
+            }
+
+            // Final update to ensure everything is saved and marked as finished
+            const finalHtml = await marked.parse(botText)
+            setMessages(prev => {
+                const filtered = prev.filter(m => m.id !== 'temp-bot')
+                return [...filtered, { id: Date.now(), role: 'assistant', content: finalHtml, rawContent: botText }]
+            })
 
             // Save Bot Message
             await fetch('/api/chat-sessions', {

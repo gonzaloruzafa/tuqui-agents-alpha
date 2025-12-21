@@ -63,33 +63,48 @@ export async function POST(req: Request) {
         }
 
         // 4. Tools
-        const tools = await getToolsForAgent(tenantId, agent.tools || [])
+        console.log('[Chat] Loading tools for agent tools:', agent.tools)
+        let tools: any = {}
+        try {
+            tools = await getToolsForAgent(tenantId, agent.tools || [])
+            console.log('[Chat] Tools loaded:', Object.keys(tools))
+        } catch (toolsError) {
+            console.error('[Chat] Error loading tools:', toolsError)
+            // Continue without tools if they fail to load
+        }
 
         console.log('[Chat] About to call streamText with messages:', JSON.stringify(messages))
 
         // 5. Generate Stream
-        const result = streamText({
-            model: google('gemini-2.0-flash'),
-            system: systemSystem,
-            messages: messages.map((m: any) => ({
-                role: m.role as 'user' | 'assistant' | 'system',
-                content: m.content
-            })),
-            tools,
-            onFinish: async (event) => {
-                // 6. Async Billing Tracking (After processing)
-                try {
-                    const { usage } = event
-                    if (usage) {
-                        await trackUsage(tenantId, session.user.email!, usage.totalTokens || 0)
+        try {
+            const result = streamText({
+                model: google('gemini-2.0-flash'),
+                system: systemSystem,
+                messages: messages.map((m: any) => ({
+                    role: m.role as 'user' | 'assistant' | 'system',
+                    content: m.content
+                })),
+                tools,
+                maxSteps: 5, // Allow tool use
+                onFinish: async (event) => {
+                    // 6. Async Billing Tracking (After processing)
+                    try {
+                        const { usage } = event
+                        if (usage) {
+                            await trackUsage(tenantId, session.user.email!, usage.totalTokens || 0)
+                        }
+                    } catch (e) {
+                        console.error('Failed to track usage', e)
                     }
-                } catch (e) {
-                    console.error('Failed to track usage', e)
                 }
-            }
-        })
+            })
 
-        return (result as any).toDataStreamResponse()
+            console.log('[Chat] streamText called successfully')
+            return (result as any).toDataStreamResponse()
+        } catch (streamError: any) {
+            console.error('[Chat] Error in streamText call:', streamError)
+            throw streamError
+        }
 
     } catch (error: any) {
         console.error('Chat error:', error)
