@@ -62,8 +62,8 @@ export const tavilySearchTool = tool({
     description: 'Buscar información actualizada en internet. Útil para noticias, datos actuales, precios, información que cambia frecuentemente.',
     parameters: z.object({
         query: z.string().describe('Términos de búsqueda en español o inglés'),
-        search_depth: z.enum(['basic', 'advanced']).optional().default('basic'),
-        max_results: z.number().optional().default(5)
+        search_depth: z.string().optional().describe('Profundidad: basic o advanced'),
+        max_results: z.number().optional().describe('Cantidad máxima de resultados')
     }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     execute: async ({ query, search_depth, max_results }: any) => {

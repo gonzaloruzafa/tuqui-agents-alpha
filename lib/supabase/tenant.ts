@@ -35,7 +35,7 @@ export async function getTenantClient(tenantId: string) {
 }
 
 // Helpers para Auth
-export async function getTenantForUser(email: string) {
+export async function getTenantForUser(email: string): Promise<{ id: string; name: string; slug: string } | null> {
     const master = getMasterClient()
     const { data: user } = await master
         .from('users')
@@ -43,7 +43,9 @@ export async function getTenantForUser(email: string) {
         .eq('email', email)
         .single()
 
-    return user?.tenants || null
+    // tenants is returned as an array when using (*), get first item
+    const tenant = Array.isArray(user?.tenants) ? user.tenants[0] : user?.tenants
+    return tenant || null
 }
 
 export async function isUserAdmin(email: string) {

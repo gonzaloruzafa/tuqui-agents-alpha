@@ -121,13 +121,19 @@ export async function uploadDocument(formData: FormData) {
             metadata: chunk.metadata
         }))
 
+        console.log(`[RAG] Inserting ${chunksToInsert.length} chunks...`)
         const { error: chunkError } = await db.from('document_chunks').insert(chunksToInsert)
 
         if (chunkError) {
             console.error('[RAG] Error inserting chunks:', chunkError)
             // Rollback document
             await db.from('documents').delete().eq('id', doc.id)
-            return { error: 'Error saving document chunks' }
+            
+            // Provide more helpful error message
+            if (chunkError.message?.includes('agent_id')) {
+                return { error: 'Database schema issue: Run the migration SQL in supabase/migrations/002_fix_rag_schema.sql' }
+            }
+            return { error: `Error saving document chunks: ${chunkError.message}` }
         }
 
         console.log(`[RAG] Successfully indexed ${chunks.length} chunks for document ${doc.id}`)
@@ -143,10 +149,13 @@ export async function uploadDocument(formData: FormData) {
     return { success: true, documentId: doc.id, chunks: chunks.length }
 }
 
-export async function deleteDocument(formData: FormData) {
+export async function deleteDocument(formData: FormData): Promise<void> {
     const id = formData.get('id') as string
     const session = await auth()
-    if (!session?.tenant?.id || !session.isAdmin) return { error: 'Unauthorized' }
+    if (!session?.tenant?.id || !session.isAdmin) {
+        console.error('[RAG] Unauthorized delete attempt')
+        return
+    }
 
     const db = await getTenantClient(session.tenant.id)
 
@@ -155,11 +164,10 @@ export async function deleteDocument(formData: FormData) {
 
     if (error) {
         console.error('[RAG] Error deleting document:', error)
-        return { error: 'Error deleting document' }
+        return
     }
 
     console.log(`[RAG] Document ${id} deleted with all chunks`)
 
     revalidatePath('/admin/rag')
-    return { success: true }
 }

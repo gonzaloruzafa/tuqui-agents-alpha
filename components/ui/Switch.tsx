@@ -14,13 +14,13 @@ export function Switch({ name, defaultChecked = false, label, value }: SwitchPro
 
     return (
         <label className="relative inline-flex items-center cursor-pointer select-none gap-3">
+            {/* Hidden input to always send value */}
+            <input type="hidden" name={name} value={checked ? 'on' : 'off'} />
             <input
                 type="checkbox"
-                name={name}
                 className="sr-only peer"
                 checked={checked}
                 onChange={(e) => setChecked(e.target.checked)}
-                value={value || 'on'}
             />
             <div className={`
                 w-11 h-6 rounded-full transition-colors duration-200 ease-in-out

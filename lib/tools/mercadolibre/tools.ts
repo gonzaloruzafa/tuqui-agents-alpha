@@ -7,22 +7,22 @@ export const searchTool = tool({
     description: 'Buscar productos en Mercado Libre (precios, links, imagenes)',
     parameters: z.object({
         query: z.string().describe('Producto a buscar'),
-        site: z.enum(MELI_SITE_LIST as [string, ...string[]]).optional().default('MLA'),
-        maxResults: z.number().optional().default(5)
+        site: z.string().optional().describe('Código de sitio MeLi (MLA, MLB, etc)'),
+        maxResults: z.number().optional().describe('Cantidad máxima de resultados')
     }),
-    execute: async ({ query, site, maxResults }) => {
-        return await searchProducts(query, site || 'MLA', maxResults)
+    execute: async ({ query, site, maxResults }: any) => {
+        return await searchProducts(query, site || 'MLA', maxResults || 5)
     }
-})
+} as any)
 
 export const priceAnalysisTool = tool({
     description: 'Analizar precios de un producto (promedio, minimos, maximos)',
     parameters: z.object({
-        query: z.string(),
-        site: z.string().optional().default('MLA'),
-        sampleSize: z.number().optional().default(10)
+        query: z.string().describe('Producto a analizar'),
+        site: z.string().optional().describe('Código de sitio MeLi'),
+        sampleSize: z.number().optional().describe('Tamaño de muestra para análisis')
     }),
-    execute: async ({ query, site, sampleSize }) => {
+    execute: async ({ query, site, sampleSize }: any) => {
         const result = await searchProducts(query, site || 'MLA', sampleSize)
         if (!result.success || result.products.length === 0) {
             return { error: 'No se encontraron productos' }
@@ -36,7 +36,7 @@ export const priceAnalysisTool = tool({
             cheapest: result.products.sort((a, b) => a.price - b.price).slice(0, 3)
         }
     }
-})
+} as any)
 
 export const meliTools = {
     meli_search: searchTool,

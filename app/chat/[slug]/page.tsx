@@ -216,7 +216,16 @@ export default function ChatPage() {
                     body: JSON.stringify({ action: 'generate-title', sessionId: sid, userMessage: userContent })
                 }).then(res => res.json()).then(data => {
                     if (data.title) {
-                        setSessions(prev => prev.map(s => s.id === sid ? { ...s, title: data.title } : s))
+                        // Check if session exists in list, if not add it
+                        setSessions(prev => {
+                            const exists = prev.find(s => s.id === sid)
+                            if (exists) {
+                                return prev.map(s => s.id === sid ? { ...s, title: data.title } : s)
+                            } else {
+                                // Add new session to top of list
+                                return [{ id: sid, title: data.title, agent_id: agent.id }, ...prev]
+                            }
+                        })
                     }
                 })
             }
@@ -286,7 +295,8 @@ export default function ChatPage() {
                     <button
                         onClick={() => {
                             router.push(`/chat/${agentSlug}`)
-                            setSidebarOpen(false) // On mobile close it
+                            // Only close sidebar on mobile
+                            if (window.innerWidth < 768) setSidebarOpen(false)
                         }}
                         className="w-full text-left px-3 py-2.5 text-sm bg-white border border-gray-200 hover:border-adhoc-violet hover:text-adhoc-violet rounded-lg shadow-sm flex gap-2 items-center transition-all group"
                     >

@@ -52,6 +52,16 @@ Ejecuta los scripts SQL en las consolas de Supabase respectivas:
 *   `supabase/master-schema.sql` -> En Master Project
 *   `supabase/tenant-schema.sql` -> En Tenant Project
 
+**Para habilitar RAG (búsqueda de documentos):**
+Ejecuta el script de migración RAG en tu **Tenant Project**:
+```
+supabase/migrations/006_complete_rag_setup.sql
+```
+Este script crea:
+- Tablas: `documents`, `document_chunks`, `agent_documents`
+- Función: `match_documents` para búsqueda vectorial
+- Índice: `ivfflat` para búsquedas eficientes
+
 ### 4. Inicialización
 Corre el script de setup para crear el tenant de demostración y tu usuario admin:
 ```bash

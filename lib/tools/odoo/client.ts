@@ -90,22 +90,23 @@ export class OdooClient {
 
 export async function getOdooClient(tenantId: string) {
     const db = await getTenantClient(tenantId)
-    const { data: interaction } = await db
+    const { data: integration } = await db
         .from('integrations')
         .select('*')
         .eq('type', 'odoo')
         .single()
 
-    if (!interaction || !interaction.is_active || !interaction.config) {
+    if (!integration || !integration.is_active || !integration.config) {
         throw new Error('Odoo integration not configured or inactive')
     }
 
-    const config = interaction.config // In real app, decrypt here if encrypted
+    const config = integration.config // In real app, decrypt here if encrypted
 
+    // Support both old and new field names
     return new OdooClient({
-        url: config.url,
-        db: config.db,
-        username: config.username,
-        api_key: config.api_key // decrypt(config.api_key)
+        url: config.odoo_url || config.url,
+        db: config.odoo_db || config.db,
+        username: config.odoo_user || config.username,
+        api_key: config.odoo_password || config.api_key // decrypt(config.api_key)
     })
 }

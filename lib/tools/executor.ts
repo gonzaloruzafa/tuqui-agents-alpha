@@ -1,9 +1,13 @@
-import { getOdooClient } from './odoo/client'
 import { meliTools } from './mercadolibre/tools'
 import { tavilySearchTool } from './tavily'
-import { tool } from 'ai'
-import { z } from 'zod'
 
+/**
+ * Get tools for an agent based on its configured tool list.
+ * 
+ * Note: Odoo tools are handled separately using the native Google SDK wrapper
+ * due to compatibility issues with the Vercel AI SDK's Zod-to-Gemini conversion.
+ * See lib/tools/odoo/wrapper.ts for Odoo tool implementation.
+ */
 export async function getToolsForAgent(tenantId: string, agentTools: string[]) {
     const tools: Record<string, any> = {}
 
@@ -12,30 +16,10 @@ export async function getToolsForAgent(tenantId: string, agentTools: string[]) {
         tools.web_search = tavilySearchTool
     }
 
-    // 2. Odoo Tools (single 'odoo' enables all odoo capabilities)
-    if (agentTools.includes('odoo') || agentTools.some(t => t.startsWith('odoo_'))) {
-        try {
-            const odoo = await getOdooClient(tenantId)
+    // 2. Odoo Tools - Handled separately via native Google SDK wrapper
+    // See app/api/chat/route.ts for Odoo-specific handling
 
-            // @ts-expect-error - AI SDK v5 type issue
-            tools.odoo_search = tool({
-                description: 'Buscar registros en Odoo ERP (ventas, contactos, productos, facturas, etc)',
-                parameters: z.object({
-                    model: z.string().describe('Modelo de Odoo: sale.order (ventas), res.partner (contactos), product.template (productos), account.move (facturas)'),
-                    domain: z.array(z.array(z.any())).describe('Dominio de búsqueda. Ej: [["name", "ilike", "juan"]] o [["state", "=", "sale"]]'),
-                    fields: z.array(z.string()).optional().describe('Campos a retornar. Si no se especifica, retorna campos básicos.'),
-                    limit: z.number().optional().default(10)
-                }),
-                execute: async ({ model, domain, fields, limit }: any) => {
-                    return await odoo.searchRead(model, domain, fields, limit)
-                }
-            })
-        } catch (e) {
-            console.warn('[Tools] Failed to load Odoo tools:', e)
-        }
-    }
-
-    // 3. MercadoLibre Tools (single 'meli_search' enables all meli capabilities)
+    // 3. MercadoLibre Tools
     if (agentTools.includes('meli_search') || agentTools.some(t => t.startsWith('meli_'))) {
         tools.meli_search = meliTools.meli_search
         tools.meli_price_analysis = meliTools.meli_price_analysis

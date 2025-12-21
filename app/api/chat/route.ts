@@ -3,6 +3,7 @@ import { getAgentBySlug } from '@/lib/agents/service'
 import { searchDocuments } from '@/lib/rag/search'
 import { getToolsForAgent } from '@/lib/tools/executor'
 import { checkUsageLimit, trackUsage } from '@/lib/billing/tracker'
+import { streamChatWithOdoo } from '@/lib/tools/gemini-odoo'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { streamText } from 'ai'
 
@@ -56,38 +57,75 @@ export async function POST(req: Request) {
         let systemSystem = agent.system_prompt || 'Sos un asistente útil.'
 
         if (agent.rag_enabled) {
-            const docs = await searchDocuments(tenantId, agent.id, inputContent)
-            if (docs.length > 0) {
-                systemSystem += `\n\nCONTEXTO RELEVANTE (Usar para responder):\n${docs.map(d => `- ${d.content}`).join('\n')}`
+            try {
+                console.log(`[Chat] RAG enabled for agent ${agent.slug}. Searching for: "${inputContent.substring(0, 50)}..."`)
+                const docs = await searchDocuments(tenantId, agent.id, inputContent)
+                console.log(`[Chat] RAG search returned ${docs.length} documents`)
+                if (docs.length > 0) {
+                    systemSystem += `\n\nCONTEXTO RELEVANTE (Usar para responder):\n${docs.map(d => `- ${d.content}`).join('\n')}`
+                }
+            } catch (ragError) {
+                console.error('[Chat] RAG search failed:', ragError)
+                // Continue without RAG if it fails
             }
         }
 
-        // 4. Tools
-        console.log('[Chat] Loading tools for agent tools:', agent.tools)
-        let tools: any = {}
-        try {
-            tools = await getToolsForAgent(tenantId, agent.tools || [])
-            console.log('[Chat] Tools loaded:', Object.keys(tools))
-        } catch (toolsError) {
-            console.error('[Chat] Error loading tools:', toolsError)
-            // Continue without tools if they fail to load
-        }
-
-        console.log('[Chat] About to call streamText with messages:', JSON.stringify(messages))
+        // 4. Check if agent uses Odoo tools (use native Google SDK for these)
+        const hasOdooTools = agent.tools?.some((t: string) => t.startsWith('odoo'))
+        
+        console.log('[Chat] Loading tools for agent tools:', agent.tools, 'hasOdoo:', hasOdooTools)
 
         // 5. Generate Stream
         try {
-            console.log('[Chat] Calling streamText with model: gemini-2.0-flash')
+            // Use native Google SDK for Odoo agents (workaround for AI SDK bug with Gemini function calling)
+            if (hasOdooTools) {
+                console.log('[Chat] Using native Gemini SDK for Odoo agent')
+                
+                const stream = streamChatWithOdoo(
+                    tenantId,
+                    systemSystem,
+                    inputContent
+                )
+                
+                const encoder = new TextEncoder()
+                const readable = new ReadableStream({
+                    async start(controller) {
+                        try {
+                            for await (const chunk of stream) {
+                                controller.enqueue(encoder.encode(chunk))
+                            }
+                            controller.close()
+                        } catch (error) {
+                            controller.error(error)
+                        }
+                    }
+                })
+                
+                return new Response(readable, {
+                    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+                })
+            }
+
+            // Standard AI SDK path for non-Odoo agents
+            let tools: any = {}
+            try {
+                tools = await getToolsForAgent(tenantId, agent.tools || [])
+                console.log('[Chat] Tools loaded:', Object.keys(tools))
+            } catch (toolsError) {
+                console.error('[Chat] Error loading tools:', toolsError)
+            }
+
+            console.log('[Chat] Calling streamText with model: gemini-2.5-flash')
             const result = streamText({
-                model: google('gemini-2.0-flash'),
+                model: google('gemini-2.5-flash'),
                 system: systemSystem,
                 messages: messages.map((m: any) => ({
                     role: m.role as 'user' | 'assistant' | 'system',
                     content: m.content
                 })),
-                tools,
-                maxSteps: 5, // Allow tool use
-                onFinish: async (event) => {
+                // Note: tools disabled for non-Odoo agents due to Gemini SDK compatibility issues
+                // tools,
+                onFinish: async (event: any) => {
                     // 6. Async Billing Tracking (After processing)
                     try {
                         const { usage } = event

@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Settings, Users, Database, ArrowLeft, Wrench, Building } from 'lucide-react'
+import { Settings, Users, Database, ArrowLeft, Wrench, Building, Clock } from 'lucide-react'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 
@@ -30,6 +30,15 @@ export default async function AdminPage() {
             color: 'text-blue-600',
             bg: 'bg-blue-100',
             action: 'Gestionar Archivos'
+        },
+        {
+            title: 'Prometeo',
+            description: 'Tareas programadas y notificaciones push.',
+            icon: Clock,
+            href: '/admin/prometeo',
+            color: 'text-purple-600',
+            bg: 'bg-purple-100',
+            action: 'Programar'
         },
         {
             title: 'Usuarios',
