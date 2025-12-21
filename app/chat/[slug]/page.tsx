@@ -209,6 +209,18 @@ export default function ChatPage() {
                 body: JSON.stringify({ action: 'save-message', sessionId: sid, role: 'assistant', content: botText })
             })
 
+            // Generate title if it's the first message
+            if (messages.length <= 1) {
+                fetch('/api/chat-sessions', {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'generate-title', sessionId: sid, userMessage: userContent })
+                }).then(res => res.json()).then(data => {
+                    if (data.title) {
+                        setSessions(prev => prev.map(s => s.id === sid ? { ...s, title: data.title } : s))
+                    }
+                })
+            }
+
         } catch (e) {
             console.error(e)
             setMessages(prev => [...prev, { id: Date.now(), role: 'assistant', content: 'Error al procesar mensaje.' }])

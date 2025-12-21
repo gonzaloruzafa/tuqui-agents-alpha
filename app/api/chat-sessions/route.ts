@@ -83,12 +83,24 @@ export async function POST(req: Request) {
     }
 
     if (action === 'generate-title') {
-        // Implement generic title generation using AI or simple summary
-        // For now just update it
         const { sessionId, userMessage } = body
-        const title = userMessage.substring(0, 30) + '...'
-        await db.from('chat_sessions').update({ title }).eq('id', sessionId)
-        return Response.json({ title })
+        const db = await getTenantClient(session.tenant.id)
+
+        // Simple logic for Alpha: first 40 chars of user message
+        // In the future, this could use Gemini to summarize
+        const title = userMessage.length > 40 
+            ? userMessage.substring(0, 40).trim() + '...' 
+            : userMessage.trim()
+
+        const { data, error } = await db
+            .from('chat_sessions')
+            .update({ title })
+            .eq('id', sessionId)
+            .select('title')
+            .single()
+
+        if (error) return new Response(error.message, { status: 500 })
+        return Response.json(data)
     }
 
     return new Response('Invalid action', { status: 400 })
