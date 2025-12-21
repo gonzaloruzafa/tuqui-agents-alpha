@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { auth } from '@/lib/auth/config'
 import { getAgentsForTenant } from '@/lib/agents/service'
+import { Header } from '@/components/Header'
 import {
     ArrowRight, Scale, Users, Briefcase, HeadphonesIcon,
     Bot, Brain, Code, Lightbulb, MessageSquare, Sparkles,
@@ -53,26 +54,7 @@ export default async function HomePage() {
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
-            {/* Header */}
-            <header className="w-full bg-white border-b border-gray-100 py-4 px-4 md:px-8">
-                <div className="max-w-5xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <img src="/adhoc-logo.png" alt="Adhoc" className="h-8 w-auto" />
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <span className="text-sm bg-gray-100 px-3 py-1 rounded-full text-gray-600">
-                            {session.tenant.name}
-                        </span>
-                        <Link
-                            href="/admin"
-                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm"
-                        >
-                            <Settings className="w-4 h-4" />
-                            Admin
-                        </Link>
-                    </div>
-                </div>
-            </header>
+            <Header />
 
             {/* Main */}
             <main className="flex-grow flex items-center justify-center px-4 py-8">
