@@ -4,8 +4,13 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 
 import { createClient } from '@supabase/supabase-js'
 
-const TENANT_URL = 'https://ancgbbzvfhoqqxiueyoz.supabase.co'
+const TENANT_URL = process.env.INITIAL_TENANT_URL || 'https://ancgbbzvfhoqqxiueyoz.supabase.co'
 const TENANT_SERVICE_KEY = process.env.INITIAL_TENANT_SERVICE_KEY!
+
+if (!TENANT_SERVICE_KEY) {
+  console.error('❌ INITIAL_TENANT_SERVICE_KEY not set in .env.local')
+  process.exit(1)
+}
 
 async function applyMigration() {
     console.log('Applying RAG schema fixes...')

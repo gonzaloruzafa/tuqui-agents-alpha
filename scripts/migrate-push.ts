@@ -1,7 +1,16 @@
+import { config } from 'dotenv';
+import { resolve } from 'path';
+config({ path: resolve(__dirname, '../.env.local') });
+
 import { createClient } from '@supabase/supabase-js';
 
-const TENANT_URL = 'https://ancgbbzvfhoqqxiueyoz.supabase.co';
-const TENANT_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFuY2diYnp2ZmhvcXF4aXVleW96Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjI2ODcxMywiZXhwIjoyMDgxODQ0NzEzfQ.vF_zWhqGNHrEp1Vpv4GI7hAALCNvyNgJrKfEWPAOeXw';
+const TENANT_URL = process.env.INITIAL_TENANT_URL || 'https://ancgbbzvfhoqqxiueyoz.supabase.co';
+const TENANT_SERVICE_KEY = process.env.INITIAL_TENANT_SERVICE_KEY!;
+
+if (!TENANT_SERVICE_KEY) {
+  console.error('❌ INITIAL_TENANT_SERVICE_KEY not set in .env.local');
+  process.exit(1);
+}
 
 async function runMigration() {
   console.log('📦 Creating push_subscriptions table...\n');
