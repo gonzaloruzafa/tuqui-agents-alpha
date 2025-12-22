@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Settings } from 'lucide-react'
 import { auth } from '@/lib/auth/config'
 import { UserMenu } from './UserMenu'
+import { NotificationBell } from './NotificationBell'
 
 export async function Header() {
     const session = await auth()
@@ -17,6 +18,7 @@ export async function Header() {
                     <span className="text-sm text-gray-500 font-medium hidden sm:inline-block">
                         Tuqui Agents
                     </span>
+                    {session?.user && <NotificationBell />}
                     {session?.isAdmin && (
                         <Link
                             href="/admin"

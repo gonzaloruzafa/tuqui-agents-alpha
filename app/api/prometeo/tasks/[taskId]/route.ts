@@ -51,8 +51,20 @@ export async function PATCH(
     
     const supabase = await getTenantClient(session.tenant.id);
 
-    // Build update object with only allowed fields
-    const allowedFields = ['prompt', 'schedule', 'notification_type', 'recipients', 'is_active'];
+    // Build update object with only allowed fields (including v2 fields)
+    const allowedFields = [
+      'name',
+      'prompt', 
+      'schedule', 
+      'notification_type', 
+      'recipients', 
+      'is_active',
+      // Prometeo v2 fields
+      'task_type',
+      'condition',
+      'check_interval',
+      'priority'
+    ];
     const updateData: Record<string, any> = {};
     
     for (const field of allowedFields) {
@@ -61,17 +73,31 @@ export async function PATCH(
       }
     }
 
-    // If schedule changed, recalculate next_run
-    if (updateData.schedule) {
+    // Determine which schedule to use for next_run calculation
+    const task_type = body.task_type;
+    const effectiveSchedule = task_type === 'conditional' 
+      ? (body.check_interval || updateData.check_interval) 
+      : (updateData.schedule || body.schedule);
+
+    // If schedule or check_interval changed, recalculate next_run
+    if (effectiveSchedule) {
       try {
-        const interval = CronExpressionParser.parse(updateData.schedule);
+        const interval = CronExpressionParser.parse(effectiveSchedule);
         updateData.next_run = interval.next().toDate().toISOString();
       } catch {
         return NextResponse.json(
-          { error: 'Invalid cron schedule' },
+          { error: 'Invalid cron schedule or check interval' },
           { status: 400 }
         );
       }
+    }
+
+    // Clean up based on task type
+    if (task_type === 'conditional') {
+      updateData.schedule = null;
+    } else if (task_type === 'scheduled') {
+      updateData.condition = null;
+      updateData.check_interval = null;
     }
 
     const { data, error } = await supabase

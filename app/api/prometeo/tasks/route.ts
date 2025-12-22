@@ -48,20 +48,50 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { agent_id, prompt, schedule, notification_type, recipients } = body;
+    const { 
+      agent_id, 
+      prompt, 
+      schedule, 
+      notification_type, 
+      recipients,
+      // Prometeo v2 fields
+      task_type = 'scheduled',
+      condition,
+      check_interval,
+      priority = 'info'
+    } = body;
 
     // Validate required fields
-    if (!agent_id || !prompt || !schedule || !recipients?.length) {
+    if (!agent_id || !prompt || !recipients?.length) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: agent_id, prompt, recipients' },
         { status: 400 }
       );
     }
 
+    // Conditional tasks need a condition
+    if (task_type === 'conditional' && !condition) {
+      return NextResponse.json(
+        { error: 'Conditional tasks require a condition' },
+        { status: 400 }
+      );
+    }
+
+    // Scheduled tasks need a schedule
+    if (task_type === 'scheduled' && !schedule) {
+      return NextResponse.json(
+        { error: 'Scheduled tasks require a cron schedule' },
+        { status: 400 }
+      );
+    }
+
+    // Determine the effective schedule for next_run calculation
+    const effectiveSchedule = task_type === 'conditional' ? (check_interval || '*/15 * * * *') : schedule;
+    
     // Validate cron expression
     let nextRun: Date;
     try {
-      const interval = CronExpressionParser.parse(schedule);
+      const interval = CronExpressionParser.parse(effectiveSchedule);
       nextRun = interval.next().toDate();
     } catch {
       return NextResponse.json(
@@ -72,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getTenantClient(session.tenant.id);
 
-    // Create task
+    // Create task with v2 fields
     const { data, error } = await supabase
       .from('prometeo_tasks')
       .insert({
@@ -80,12 +110,17 @@ export async function POST(request: NextRequest) {
         user_email: session.user.email, // Required NOT NULL field
         name: body.name || '', // Optional name
         prompt,
-        schedule,
+        schedule: task_type === 'scheduled' ? schedule : null,
         next_run: nextRun.toISOString(),
-        notification_type: notification_type || 'push',
+        notification_type: notification_type || 'in_app',
         recipients,
         is_active: true,
         created_by: session.user.email,
+        // Prometeo v2 fields
+        task_type,
+        condition: task_type === 'conditional' ? condition : null,
+        check_interval: task_type === 'conditional' ? (check_interval || '*/15 * * * *') : null,
+        priority,
       })
       .select()
       .single();
