@@ -1,22 +1,44 @@
-import dotenv from 'dotenv'
-import path from 'path'
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
+import { config } from 'dotenv'
+import { resolve } from 'path'
+config({ path: resolve(__dirname, '../.env.local') })
 
-import { getTenantClient } from '../lib/supabase/tenant'
+import { createClient } from '@supabase/supabase-js'
 
-async function checkTableSchema() {
-    const tenantId = 'de7ef34a-12bd-4fe9-9d02-3d876a9393c2' // Cliente Adhoc
-    const db = await getTenantClient(tenantId)
-    
-    console.log('Checking document_chunks table...')
-    const { data: chunkData, error: chunkError } = await db.from('document_chunks').select('*').limit(1)
-    if (chunkError) {
-        console.error('Error selecting from document_chunks:', chunkError)
-    } else if (chunkData && chunkData.length > 0) {
-        console.log('Chunk columns:', Object.keys(chunkData[0]))
-    } else {
-        console.log('No chunks found.')
-    }
+const tenant = createClient(
+  process.env.INITIAL_TENANT_URL!,
+  process.env.INITIAL_TENANT_SERVICE_KEY!
+)
+
+async function main() {
+  // Agents schema
+  console.log('\n📋 AGENTS SCHEMA:')
+  const { data: agents } = await tenant.from('agents').select('*').limit(1)
+  if (agents && agents[0]) {
+    console.log('Columns:', Object.keys(agents[0]))
+  }
+  
+  // Try insert with minimal fields
+  console.log('\n📋 TEST INSERT PROMETEO_TASKS:')
+  const { data: insertTest, error: insertErr } = await tenant
+    .from('prometeo_tasks')
+    .insert({
+      agent_id: '42921302-87af-4405-ab32-dbbeda4aa428',
+      prompt: 'test prompt',
+      schedule: '* * * * *',
+      user_email: 'test@test.com' // Adding user_email
+    })
+    .select()
+  
+  if (insertErr) {
+    console.log('Insert error:', insertErr)
+  } else {
+    console.log('Inserted successfully!')
+    console.log('Row columns:', Object.keys(insertTest[0]))
+    console.log('Full row:', insertTest[0])
+    // Cleanup
+    await tenant.from('prometeo_tasks').delete().eq('id', insertTest[0].id)
+    console.log('Cleaned up test row')
+  }
 }
 
-checkTableSchema()
+main().catch(console.error)

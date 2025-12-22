@@ -77,6 +77,8 @@ export async function POST(request: NextRequest) {
       .from('prometeo_tasks')
       .insert({
         agent_id,
+        user_email: session.user.email, // Required NOT NULL field
+        name: body.name || '', // Optional name
         prompt,
         schedule,
         next_run: nextRun.toISOString(),
