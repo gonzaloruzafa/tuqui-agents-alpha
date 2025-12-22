@@ -15,9 +15,12 @@ export async function Header() {
                     <img src="/adhoc-logo.png" alt="Adhoc" className="h-8 w-auto" />
                 </Link>
                 <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-500 font-medium hidden sm:inline-block">
+                    <Link 
+                        href="/" 
+                        className="text-sm text-gray-500 hover:text-purple-600 font-medium hidden sm:inline-block transition-colors"
+                    >
                         Tuqui Agents
-                    </span>
+                    </Link>
                     {session?.user && <NotificationBell />}
                     {session?.isAdmin && (
                         <Link
