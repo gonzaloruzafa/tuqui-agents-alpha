@@ -872,6 +872,17 @@ ${OUTPUT_FORMAT_GUIDE}
 
 8. **Formato argentino de números**: $1.234.567,89 (punto miles, coma decimal).
 
+## 🔍 DISCOVER MODEL (para modelos no documentados)
+
+Si necesitás consultar un modelo NO documentado arriba (ej: stock.location, stock.warehouse, mrp.production, project.task), usá primero **discover_model** para conocer sus campos reales:
+
+\`\`\`
+discover_model("stock.location")
+→ Devuelve campos reales: name, usage, location_id, company_id...
+\`\`\`
+
+Esto evita inventar nombres de campos en modelos desconocidos.
+
 ## 📚 MODELOS DISPONIBLES EN ESTE SISTEMA
 
 ${generateSchemaDocumentation()}
