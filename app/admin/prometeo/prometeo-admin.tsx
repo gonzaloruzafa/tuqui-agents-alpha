@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  Clock, Play, Pause, Trash2, Plus, RefreshCw, Bell, Calendar, Bot, Mail,
-  AlertCircle, AlertTriangle, Info, Zap, X, ChevronRight
+  Clock, Play, Trash2, Plus, RefreshCw, Bell, Calendar, Bot, Mail,
+  AlertCircle, AlertTriangle, Info, Zap, X, ChevronRight, Home, Pencil
 } from 'lucide-react';
+import Link from 'next/link';
 
 type TaskType = 'scheduled' | 'conditional';
 type NotificationType = 'in_app' | 'push' | 'email' | 'push_and_email' | 'all';
@@ -44,6 +45,7 @@ export default function PrometeoAdmin({ tenantId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<PrometeoTask | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -171,6 +173,7 @@ export default function PrometeoAdmin({ tenantId }: Props) {
                 onToggle={() => toggleTask(task.id, task.is_active)}
                 onDelete={() => deleteTask(task.id)}
                 onRunNow={() => runTaskNow(task.id)}
+                onEdit={() => setEditingTask(task)}
               />
             ))}
           </div>
@@ -178,18 +181,27 @@ export default function PrometeoAdmin({ tenantId }: Props) {
       </div>
 
       {showCreateModal && (
-        <CreateTaskModal
+        <TaskModal
           agents={agents}
           onClose={() => setShowCreateModal(false)}
-          onCreated={() => { setShowCreateModal(false); fetchData(); }}
+          onSaved={() => { setShowCreateModal(false); fetchData(); }}
+        />
+      )}
+
+      {editingTask && (
+        <TaskModal
+          agents={agents}
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSaved={() => { setEditingTask(null); fetchData(); }}
         />
       )}
     </div>
   );
 }
 
-function TaskRow({ task, onToggle, onDelete, onRunNow }: { 
-  task: PrometeoTask; onToggle: () => void; onDelete: () => void; onRunNow: () => void;
+function TaskRow({ task, onToggle, onDelete, onRunNow, onEdit }: { 
+  task: PrometeoTask; onToggle: () => void; onDelete: () => void; onRunNow: () => void; onEdit: () => void;
 }) {
   const isConditional = task.task_type === 'conditional';
   
@@ -215,8 +227,8 @@ function TaskRow({ task, onToggle, onDelete, onRunNow }: {
           )}
         </div>
 
-        {/* Main Info */}
-        <div className="flex-1 min-w-0">
+        {/* Main Info - Clickeable */}
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onEdit}>
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-900 text-sm">{task.agent_name || 'Agente'}</span>
             <ChevronRight className="w-3 h-3 text-gray-300" />
@@ -241,32 +253,43 @@ function TaskRow({ task, onToggle, onDelete, onRunNow }: {
           <span className={`px-2 py-0.5 rounded text-xs font-medium ${p.bg} ${p.color}`}>
             {p.label}
           </span>
-          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-            task.is_active ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'
-          }`}>
-            {task.is_active ? 'Activa' : 'Pausada'}
-          </span>
         </div>
+
+        {/* Toggle Switch */}
+        <label className="relative inline-flex items-center cursor-pointer select-none flex-shrink-0">
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            checked={task.is_active}
+            onChange={onToggle}
+          />
+          <div className={`
+            w-11 h-6 rounded-full transition-colors duration-200 ease-in-out relative
+            ${task.is_active ? 'bg-purple-600' : 'bg-gray-200'}
+          `}>
+            <div className={`
+              absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm
+              transition-transform duration-200 ease-in-out
+              ${task.is_active ? 'translate-x-5' : 'translate-x-0'}
+            `} />
+          </div>
+        </label>
 
         {/* Actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={onEdit}
+            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Editar"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
           <button
             onClick={onRunNow}
             className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
             title="Ejecutar ahora"
           >
             <Play className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onToggle}
-            className={`p-1.5 rounded transition-colors ${
-              task.is_active 
-                ? 'text-gray-400 hover:text-amber-600 hover:bg-amber-50' 
-                : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
-            }`}
-            title={task.is_active ? 'Pausar' : 'Activar'}
-          >
-            {task.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </button>
           <button
             onClick={onDelete}
@@ -281,18 +304,19 @@ function TaskRow({ task, onToggle, onDelete, onRunNow }: {
   );
 }
 
-function CreateTaskModal({ agents, onClose, onCreated }: {
-  agents: Agent[]; onClose: () => void; onCreated: () => void;
+function TaskModal({ agents, task, onClose, onSaved }: {
+  agents: Agent[]; task?: PrometeoTask; onClose: () => void; onSaved: () => void;
 }) {
-  const [taskType, setTaskType] = useState<TaskType>('scheduled');
-  const [agentId, setAgentId] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [schedule, setSchedule] = useState('0 9 * * 1-5');
-  const [condition, setCondition] = useState('');
-  const [checkInterval, setCheckInterval] = useState('*/15 * * * *');
-  const [priority, setPriority] = useState<Priority>('info');
-  const [notificationType, setNotificationType] = useState<NotificationType>('in_app');
-  const [recipients, setRecipients] = useState('');
+  const isEditing = !!task;
+  const [taskType, setTaskType] = useState<TaskType>(task?.task_type || 'scheduled');
+  const [agentId, setAgentId] = useState(task?.agent_id || '');
+  const [prompt, setPrompt] = useState(task?.prompt || '');
+  const [schedule, setSchedule] = useState(task?.schedule || '0 9 * * 1-5');
+  const [condition, setCondition] = useState(task?.condition || '');
+  const [checkInterval, setCheckInterval] = useState(task?.check_interval || '*/15 * * * *');
+  const [priority, setPriority] = useState<Priority>(task?.priority || 'info');
+  const [notificationType, setNotificationType] = useState<NotificationType>(task?.notification_type || 'in_app');
+  const [recipients, setRecipients] = useState(task?.recipients?.join(', ') || '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -302,28 +326,33 @@ function CreateTaskModal({ agents, onClose, onCreated }: {
     setSubmitting(true);
 
     try {
-      const res = await fetch('/api/prometeo/tasks', {
-        method: 'POST',
+      const payload = {
+        agent_id: agentId,
+        prompt,
+        task_type: taskType,
+        schedule: taskType === 'scheduled' ? schedule : null,
+        condition: taskType === 'conditional' ? condition : null,
+        check_interval: taskType === 'conditional' ? checkInterval : null,
+        priority,
+        notification_type: notificationType,
+        recipients: recipients.split(',').map(r => r.trim()).filter(Boolean),
+      };
+
+      const url = isEditing ? `/api/prometeo/tasks/${task.id}` : '/api/prometeo/tasks';
+      const method = isEditing ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_id: agentId,
-          prompt,
-          task_type: taskType,
-          schedule: taskType === 'scheduled' ? schedule : null,
-          condition: taskType === 'conditional' ? condition : null,
-          check_interval: taskType === 'conditional' ? checkInterval : null,
-          priority,
-          notification_type: notificationType,
-          recipients: recipients.split(',').map(r => r.trim()).filter(Boolean),
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Error al crear tarea');
+        throw new Error(data.error || `Error al ${isEditing ? 'actualizar' : 'crear'} tarea`);
       }
 
-      onCreated();
+      onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
@@ -337,7 +366,7 @@ function CreateTaskModal({ agents, onClose, onCreated }: {
       
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-lg font-semibold text-gray-900">Nueva Tarea</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{isEditing ? 'Editar Tarea' : 'Nueva Tarea'}</h2>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded">
             <X className="w-5 h-5" />
           </button>
@@ -537,7 +566,7 @@ function CreateTaskModal({ agents, onClose, onCreated }: {
               disabled={submitting}
               className="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 font-medium"
             >
-              {submitting ? 'Creando...' : 'Crear'}
+              {submitting ? (isEditing ? 'Guardando...' : 'Creando...') : (isEditing ? 'Guardar' : 'Crear')}
             </button>
           </div>
         </form>

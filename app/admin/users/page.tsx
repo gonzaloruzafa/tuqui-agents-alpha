@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, UserPlus, Trash2, Mail, Shield, ShieldCheck, ShieldOff } from 'lucide-react'
+import { ArrowLeft, UserPlus, Trash2, Mail, Shield, ShieldCheck, ShieldOff, Home, Users } from 'lucide-react'
 import { getMasterClient } from '@/lib/supabase/master'
 import { revalidatePath } from 'next/cache'
 import { Header } from '@/components/Header'
@@ -78,15 +78,25 @@ export default async function AdminUsersPage() {
     const users = await getUsers(session.tenant!.id)
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
+        <div className="min-h-screen bg-gray-50/50 font-sans flex flex-col">
             <Header />
 
             <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-                <div className="max-w-4xl mx-auto px-6 h-14 flex items-center gap-4">
-                    <Link href="/admin" className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500">
-                        <ArrowLeft className="w-5 h-5" />
+                <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Link href="/admin" className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500">
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-adhoc-coral/10 rounded-lg flex items-center justify-center">
+                                <Users className="w-4 h-4 text-adhoc-coral" />
+                            </div>
+                            <h1 className="text-lg font-bold text-gray-900">Usuarios</h1>
+                        </div>
+                    </div>
+                    <Link href="/" className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500" title="Ir a inicio">
+                        <Home className="w-5 h-5" />
                     </Link>
-                    <h1 className="text-lg font-bold text-gray-900">Usuarios</h1>
                 </div>
             </div>
 

@@ -83,8 +83,111 @@ export class OdooClient {
         )
     }
 
-    async searchRead(model: string, domain: any[] = [], fields: string[] = [], limit = 10) {
-        return this.execute(model, 'search_read', [domain], { fields, limit })
+    async searchRead(model: string, domain: any[] = [], fields: string[] = [], limit = 10, order?: string) {
+        return this.execute(model, 'search_read', [domain], { fields, limit, order })
+    }
+
+    /**
+     * Aggregation query with GROUP BY - executes server-side for performance
+     * @param model - Odoo model name
+     * @param domain - Filter domain
+     * @param fields - Fields to aggregate, e.g. ['amount_total:sum', 'id:count']
+     * @param groupBy - Fields to group by, e.g. ['partner_id', 'date_order:month']
+     * @param options - Additional options (limit, orderBy, lazy)
+     */
+    async readGroup(
+        model: string,
+        domain: any[] = [],
+        fields: string[] = [],
+        groupBy: string[] = [],
+        options: { limit?: number; orderBy?: string; lazy?: boolean } = {}
+    ): Promise<any[]> {
+        return this.execute(model, 'read_group', [domain], {
+            fields,
+            groupby: groupBy,
+            limit: options.limit || 80,
+            orderby: options.orderBy,
+            lazy: options.lazy ?? true
+        })
+    }
+
+    /**
+     * Count records matching domain - faster than searchRead for counts
+     */
+    async searchCount(model: string, domain: any[] = []): Promise<number> {
+        return this.execute(model, 'search_count', [domain])
+    }
+
+    /**
+     * Get field definitions for a model - useful for dynamic queries
+     */
+    async fieldsGet(model: string, attributes: string[] = ['string', 'type', 'relation']): Promise<Record<string, any>> {
+        return this.execute(model, 'fields_get', [], { attributes })
+    }
+
+    /**
+     * Discover all available models in Odoo
+     * Returns list of models with name and description
+     */
+    async discoverModels(): Promise<Array<{ model: string; name: string }>> {
+        const models = await this.execute('ir.model', 'search_read', [[]], {
+            fields: ['model', 'name'],
+            order: 'model',
+            limit: 500
+        })
+        return models.map((m: any) => ({ model: m.model, name: m.name }))
+    }
+
+    /**
+     * Discover useful fields for a model
+     * Returns simplified field info with inferred types
+     */
+    async discoverFields(model: string): Promise<{
+        dateFields: string[]
+        amountFields: string[]
+        relationFields: Array<{ name: string; relation: string }>
+        stateField?: string
+        allFields: string[]
+    }> {
+        const fields = await this.fieldsGet(model, ['string', 'type', 'relation', 'store'])
+        
+        const dateFields: string[] = []
+        const amountFields: string[] = []
+        const relationFields: Array<{ name: string; relation: string }> = []
+        const allFields: string[] = []
+        let stateField: string | undefined
+        
+        for (const [name, meta] of Object.entries(fields) as [string, any][]) {
+            // Skip internal fields
+            if (name.startsWith('__') || name === 'id') continue
+            if (!meta.store) continue // Only stored fields
+            
+            allFields.push(name)
+            
+            // Detect date fields
+            if (['date', 'datetime'].includes(meta.type)) {
+                dateFields.push(name)
+            }
+            
+            // Detect amount/money fields by type + name heuristic
+            if (['float', 'monetary'].includes(meta.type)) {
+                if (/amount|total|price|cost|residual|balance|credit|debit/i.test(name)) {
+                    amountFields.push(name)
+                }
+            }
+            
+            // Detect relations
+            if (['many2one', 'one2many', 'many2many'].includes(meta.type) && meta.relation) {
+                relationFields.push({ name, relation: meta.relation })
+            }
+            
+            // Detect state field
+            if (name === 'state' && meta.type === 'selection') {
+                stateField = 'state'
+            }
+        }
+        
+        return { dateFields, amountFields, relationFields, stateField, allFields }
     }
 }
 

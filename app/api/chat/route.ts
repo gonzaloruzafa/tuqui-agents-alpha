@@ -81,10 +81,25 @@ export async function POST(req: Request) {
             if (hasOdooTools) {
                 console.log('[Chat] Using native Gemini SDK for Odoo agent')
                 
+                // Convert message history to Gemini Content[] format
+                // Limit to last 20 messages to avoid context overflow
+                const MAX_HISTORY = 20
+                const historyMessages = messages.slice(
+                    Math.max(0, messages.length - 1 - MAX_HISTORY), 
+                    -1  // Exclude last message (will be sent as userMessage)
+                )
+                const history = historyMessages.map((m: any) => ({
+                    role: m.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: m.content }]
+                }))
+                
+                console.log('[Chat] Passing history with', history.length, 'messages')
+                
                 const stream = streamChatWithOdoo(
                     tenantId,
                     systemSystem,
-                    inputContent
+                    inputContent,
+                    history
                 )
                 
                 const encoder = new TextEncoder()

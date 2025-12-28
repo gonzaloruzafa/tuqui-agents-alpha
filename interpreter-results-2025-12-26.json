@@ -1,0 +1,680 @@
+[
+  {
+    "id": 1,
+    "question": "dame las ventas de abril 2025",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Total de ventas de abril 2025",
+      "model": "sale.order",
+      "period": "abril 2025",
+      "metric": "amount_total:sum",
+      "groupBy": null
+    },
+    "success": true,
+    "durationMs": 2757
+  },
+  {
+    "id": 2,
+    "question": "cuánto vendimos este mes",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Total de ventas de este mes",
+      "model": "sale.order",
+      "period": "este mes",
+      "metric": "amount_total:sum",
+      "groupBy": null
+    },
+    "success": true,
+    "durationMs": 964
+  },
+  {
+    "id": 3,
+    "question": "total de ventas del año",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Total de ventas del año",
+      "model": "sale.order",
+      "period": "año 2025",
+      "metric": "amount_total:sum",
+      "groupBy": null
+    },
+    "success": true,
+    "durationMs": 862
+  },
+  {
+    "id": 4,
+    "question": "facturación de diciembre",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Facturación de diciembre",
+      "model": "account.move",
+      "period": "diciembre 2025",
+      "metric": "amount_total:sum",
+      "groupBy": null
+    },
+    "success": true,
+    "durationMs": 936
+  },
+  {
+    "id": 5,
+    "question": "ventas del último trimestre",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Ventas del último trimestre",
+      "model": "sale.order",
+      "period": "último trimestre",
+      "metric": "amount_total:sum",
+      "groupBy": null
+    },
+    "success": true,
+    "durationMs": 1375
+  },
+  {
+    "id": 6,
+    "question": "top 10 clientes por ventas",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Top 10 clientes por ventas",
+      "model": "sale.order",
+      "metric": "amount_total:sum",
+      "groupBy": [
+        "partner_id"
+      ],
+      "orderBy": "amount_total desc",
+      "limit": 10
+    },
+    "success": true,
+    "durationMs": 1052
+  },
+  {
+    "id": 7,
+    "question": "cuáles son los productos más vendidos",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Productos más vendidos por cantidad",
+      "model": "sale.order.line",
+      "metric": "product_uom_qty:sum",
+      "groupBy": [
+        "product_id"
+      ],
+      "orderBy": "product_uom_qty desc",
+      "limit": 10
+    },
+    "success": true,
+    "durationMs": 1201
+  },
+  {
+    "id": 8,
+    "question": "qué vendedor vendió más",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Vendedor con mayores ventas",
+      "model": "sale.order",
+      "metric": "amount_total:sum",
+      "groupBy": [
+        "user_id"
+      ],
+      "orderBy": "amount_total desc",
+      "limit": 1
+    },
+    "success": true,
+    "durationMs": 988
+  },
+  {
+    "id": 9,
+    "question": "ranking de productos por cantidad",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Ranking de productos por cantidad",
+      "model": "sale.order.line",
+      "metric": "product_uom_qty:sum",
+      "groupBy": [
+        "product_id"
+      ],
+      "orderBy": "product_uom_qty desc"
+    },
+    "success": true,
+    "durationMs": 1439
+  },
+  {
+    "id": 10,
+    "question": "mejores clientes del año",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Top clientes del año por monto de compras",
+      "model": "sale.order",
+      "metric": "amount_total:sum",
+      "groupBy": [
+        "partner_id"
+      ],
+      "orderBy": "amount_total desc",
+      "period": "año 2025"
+    },
+    "success": true,
+    "durationMs": 1347
+  },
+  {
+    "id": 11,
+    "question": "cuánta deuda tenemos",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Deuda total",
+      "model": "account.move",
+      "metric": "amount_total:sum",
+      "groupBy": null,
+      "filters": "deuda"
+    },
+    "success": true,
+    "durationMs": 1025
+  },
+  {
+    "id": 12,
+    "question": "quién nos debe más plata",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Clientes que más deben",
+      "model": "account.move",
+      "metric": "amount_residual:sum",
+      "groupBy": [
+        "partner_id"
+      ],
+      "orderBy": "amount_residual desc",
+      "filters": "facturas cliente impagas"
+    },
+    "success": true,
+    "durationMs": 1028
+  },
+  {
+    "id": 13,
+    "question": "facturas vencidas",
+    "category": "simple",
+    "interpreted": {
+      "intent": "search",
+      "description": "Facturas vencidas",
+      "model": "account.move",
+      "filters": "facturas vencidas",
+      "domain": [
+        [
+          "invoice_date_due",
+          "<",
+          "2025-12-26"
+        ],
+        [
+          "state",
+          "!=",
+          "posted"
+        ]
+      ]
+    },
+    "success": true,
+    "durationMs": 2049
+  },
+  {
+    "id": 14,
+    "question": "top 10 morosos",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Top 10 clientes morosos por monto adeudado",
+      "model": "account.move",
+      "metric": "amount_residual:sum",
+      "groupBy": [
+        "partner_id"
+      ],
+      "orderBy": "amount_residual desc",
+      "limit": 10,
+      "filters": "estado borrador es falso y el estado publicado es verdadero"
+    },
+    "success": true,
+    "durationMs": 1241
+  },
+  {
+    "id": 15,
+    "question": "deuda mayor a 60 días",
+    "category": "simple",
+    "interpreted": {
+      "intent": "search",
+      "description": "Facturas con deuda mayor a 60 días",
+      "model": "account.move",
+      "filters": "deuda mayor a 60 días"
+    },
+    "success": true,
+    "durationMs": 1323
+  },
+  {
+    "id": 16,
+    "question": "productos con stock bajo",
+    "category": "simple",
+    "interpreted": {
+      "intent": "search",
+      "description": "Productos con stock bajo",
+      "model": "product.product",
+      "filters": "stock bajo"
+    },
+    "success": true,
+    "durationMs": 1028
+  },
+  {
+    "id": 17,
+    "question": "cuánto stock tenemos",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Cantidad total de stock",
+      "model": "product.product",
+      "metric": "qty_available:sum",
+      "groupBy": null
+    },
+    "success": true,
+    "durationMs": 1033
+  },
+  {
+    "id": 18,
+    "question": "productos sin movimiento",
+    "category": "simple",
+    "interpreted": {
+      "intent": "clarify",
+      "description": "Pregunta de clarificación para el usuario",
+      "needsClarification": "¿Te refieres a productos sin ventas o sin compras?"
+    },
+    "success": false,
+    "durationMs": 1346
+  },
+  {
+    "id": 19,
+    "question": "inventario total",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Valor total del inventario",
+      "model": "stock.quant",
+      "metric": "inventory_value:sum",
+      "groupBy": null
+    },
+    "success": true,
+    "durationMs": 1117
+  },
+  {
+    "id": 20,
+    "question": "cuánto compramos este mes",
+    "category": "simple",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Total de compras de este mes",
+      "model": "purchase.order",
+      "period": "este mes",
+      "metric": "amount_total:sum",
+      "groupBy": null
+    },
+    "success": true,
+    "durationMs": 932
+  },
+  {
+    "id": 1,
+    "question": "desglosame por vendedor",
+    "category": "context-groupby",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Ventas de abril 2025 agrupadas por vendedor",
+      "model": "sale.order",
+      "period": "abril 2025",
+      "metric": "amount_total:sum",
+      "groupBy": [
+        "user_id"
+      ],
+      "contextFromHistory": "Agregando groupBy a la consulta anterior de ventas de abril"
+    },
+    "success": true,
+    "durationMs": 1334
+  },
+  {
+    "id": 2,
+    "question": "y el segundo?",
+    "category": "context-ordinal",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Segundo producto más vendido",
+      "model": "sale.order.line",
+      "metric": "product_uom_qty:sum",
+      "groupBy": [
+        "product_id"
+      ],
+      "orderBy": "product_uom_qty desc",
+      "limit": 2,
+      "contextFromHistory": "Extendiendo consulta anterior para incluir top 2"
+    },
+    "success": true,
+    "durationMs": 1237
+  },
+  {
+    "id": 3,
+    "question": "y en febrero?",
+    "category": "context-period",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Total de ventas de febrero",
+      "model": "sale.order",
+      "period": "febrero 2025",
+      "metric": "amount_total:sum",
+      "groupBy": null,
+      "contextFromHistory": "Consulta similar a la anterior para el mes de febrero"
+    },
+    "success": true,
+    "durationMs": 1027
+  },
+  {
+    "id": 4,
+    "question": "dame más detalle del Q2",
+    "category": "context-drill-down",
+    "interpreted": {
+      "intent": "search",
+      "description": "Detalle de las ventas del Q2 2025",
+      "model": "sale.order",
+      "period": "Q2 2025",
+      "contextFromHistory": "Detalle de las ventas del Q2 basado en la consulta anterior"
+    },
+    "success": true,
+    "durationMs": 1130
+  },
+  {
+    "id": 5,
+    "question": "qué nos compró?",
+    "category": "context-entity",
+    "interpreted": {
+      "intent": "search",
+      "description": "Productos comprados por Hospital X",
+      "model": "sale.order.line",
+      "filters": [
+        [
+          "order_id.partner_id.name",
+          "=",
+          "Hospital X"
+        ]
+      ],
+      "fields": [
+        "product_id",
+        "product_uom_qty"
+      ]
+    },
+    "success": true,
+    "durationMs": 1332
+  },
+  {
+    "id": 6,
+    "question": "de más de 90 días?",
+    "category": "context-filter",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Deuda total de más de 90 días",
+      "model": "account.move",
+      "metric": "amount_total:sum",
+      "filters": "deuda de más de 90 días",
+      "groupBy": null,
+      "contextFromHistory": "Continuando consulta anterior sobre deuda"
+    },
+    "success": true,
+    "durationMs": 1122
+  },
+  {
+    "id": 7,
+    "question": "pasame los datos del primero",
+    "category": "context-detail",
+    "interpreted": {
+      "intent": "search",
+      "description": "Datos del primer cliente moroso",
+      "model": "res.partner",
+      "filters": "cliente moroso",
+      "orderBy": "amount_total desc",
+      "limit": 1,
+      "contextFromHistory": "Continuando con la consulta anterior de top 5 morosos"
+    },
+    "success": true,
+    "durationMs": 1067
+  },
+  {
+    "id": 8,
+    "question": "cuántas unidades?",
+    "category": "context-metric",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Cantidad de unidades vendidas del producto más vendido en 2025",
+      "model": "sale.order.line",
+      "metric": "product_uom_qty:sum",
+      "groupBy": [
+        "product_id"
+      ],
+      "filters": [
+        [
+          "product_id",
+          "=",
+          "Scanner XYZ"
+        ]
+      ],
+      "period": "año 2025",
+      "contextFromHistory": "Consulta sobre la cantidad de unidades vendidas del producto más vendido en 2025"
+    },
+    "success": true,
+    "durationMs": 1507
+  },
+  {
+    "id": 9,
+    "question": "ahora por monto, no cantidad",
+    "category": "context-metric-change",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Top 10 productos más vendidos por monto",
+      "model": "sale.order.line",
+      "metric": "price_total:sum",
+      "groupBy": [
+        "product_id"
+      ],
+      "orderBy": "price_total desc",
+      "limit": 10,
+      "contextFromHistory": "Modificando consulta anterior para ordenar por monto en lugar de cantidad"
+    },
+    "success": true,
+    "durationMs": 1337
+  },
+  {
+    "id": 10,
+    "question": "compará con marzo",
+    "category": "context-compare",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Comparación de ventas entre abril y marzo",
+      "model": "sale.order",
+      "period": "abril 2025 vs marzo 2025",
+      "metric": "amount_total:sum",
+      "groupBy": null,
+      "contextFromHistory": "Comparando con el mes anterior"
+    },
+    "success": true,
+    "durationMs": 1340
+  },
+  {
+    "id": 11,
+    "question": "activos?",
+    "category": "context-filter-add",
+    "interpreted": {
+      "intent": "count",
+      "description": "Cantidad de clientes activos",
+      "model": "res.partner",
+      "filters": "activos",
+      "contextFromHistory": "Refinando la consulta anterior de cantidad de clientes"
+    },
+    "success": true,
+    "durationMs": 1026
+  },
+  {
+    "id": 12,
+    "question": "del mes pasado",
+    "category": "context-period-add",
+    "interpreted": {
+      "intent": "count",
+      "description": "Cantidad de facturas pendientes del mes pasado",
+      "model": "account.move",
+      "period": "mes pasado",
+      "filters": "facturas pendientes",
+      "contextFromHistory": "Refinando la consulta anterior sobre facturas pendientes"
+    },
+    "success": true,
+    "durationMs": 1030
+  },
+  {
+    "id": 13,
+    "question": "dame el top 10",
+    "category": "context-extend",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Top 10 vendedores",
+      "model": "sale.order",
+      "metric": "amount_total:sum",
+      "groupBy": [
+        "user_id"
+      ],
+      "orderBy": "amount_total desc",
+      "limit": 10,
+      "contextFromHistory": "Extending consulta anterior para incluir top 10"
+    },
+    "success": true,
+    "durationMs": 1083
+  },
+  {
+    "id": 14,
+    "question": "mejor por vendedor",
+    "category": "context-groupby-change",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Ventas agrupadas por vendedor",
+      "model": "sale.order",
+      "metric": "amount_total:sum",
+      "groupBy": [
+        "user_id"
+      ],
+      "contextFromHistory": "Refinando la agrupación de ventas por cliente a ventas por vendedor"
+    },
+    "success": true,
+    "durationMs": 1280
+  },
+  {
+    "id": 15,
+    "question": "las de más de $1M",
+    "category": "context-filter-amount",
+    "interpreted": {
+      "intent": "search",
+      "description": "Últimas 10 ventas de más de $1M",
+      "model": "sale.order",
+      "filters": [
+        [
+          "amount_total",
+          ">",
+          1000000
+        ]
+      ],
+      "orderBy": "date_order desc",
+      "limit": 10,
+      "contextFromHistory": "Filtrando las ventas anteriores por monto mayor a $1M"
+    },
+    "success": true,
+    "durationMs": 1950
+  },
+  {
+    "id": 16,
+    "question": "y ayer?",
+    "category": "context-period-relative",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Total de ventas de ayer",
+      "model": "sale.order",
+      "period": "ayer",
+      "metric": "amount_total:sum",
+      "groupBy": null
+    },
+    "success": true,
+    "durationMs": 1031
+  },
+  {
+    "id": 17,
+    "question": "del año pasado",
+    "category": "context-period-change",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Compras del cliente Hospital X el año pasado",
+      "model": "sale.order",
+      "period": "año 2024",
+      "metric": "amount_total:sum",
+      "groupBy": null,
+      "filters": [
+        [
+          "partner_id",
+          "=",
+          "Hospital X"
+        ]
+      ]
+    },
+    "success": true,
+    "durationMs": 1302
+  },
+  {
+    "id": 18,
+    "question": "cuáles son los más importantes?",
+    "category": "context-rank",
+    "interpreted": {
+      "intent": "search",
+      "description": "Productos sin stock más importantes",
+      "model": "product.product",
+      "filters": "productos sin stock",
+      "orderBy": "virtual_available desc",
+      "contextFromHistory": "Continuando la consulta anterior de productos sin stock"
+    },
+    "success": true,
+    "durationMs": 1145
+  },
+  {
+    "id": 19,
+    "question": "no, de 2024",
+    "category": "context-correction",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Total de ventas de abril 2024",
+      "model": "sale.order",
+      "period": "abril 2024",
+      "metric": "amount_total:sum",
+      "groupBy": null,
+      "contextFromHistory": "Modificando periodo a abril 2024"
+    },
+    "success": true,
+    "durationMs": 1046
+  },
+  {
+    "id": 20,
+    "question": "solo los de Buenos Aires",
+    "category": "context-location-filter",
+    "interpreted": {
+      "intent": "aggregate",
+      "description": "Top morosos de Buenos Aires",
+      "model": "account.move",
+      "metric": "amount_residual:sum",
+      "groupBy": [
+        "partner_id"
+      ],
+      "orderBy": "amount_residual desc",
+      "filters": "clientes de Buenos Aires",
+      "contextFromHistory": "Filtrando top morosos para incluir solo clientes de Buenos Aires"
+    },
+    "success": true,
+    "durationMs": 1094
+  }
+]

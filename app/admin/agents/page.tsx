@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Bot, Edit, Save, Plus, Wrench } from 'lucide-react'
+import { ArrowLeft, Bot, Edit, Save, Plus, Wrench, Home } from 'lucide-react'
 import { getTenantClient } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 
@@ -45,13 +45,23 @@ export default async function AdminAgentsPage() {
     const agents = await getAgents(session.tenant!.id)
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans">
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-6 h-16 flex items-center gap-4">
-                    <Link href="/admin" className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500">
-                        <ArrowLeft className="w-5 h-5" />
+        <div className="min-h-screen bg-gray-50/50 font-sans">
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+                <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Link href="/admin" className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500">
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-adhoc-lavender rounded-lg flex items-center justify-center">
+                                <Bot className="w-4 h-4 text-adhoc-violet" />
+                            </div>
+                            <h1 className="text-lg font-bold text-gray-900">Agentes</h1>
+                        </div>
+                    </div>
+                    <Link href="/" className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500" title="Ir a inicio">
+                        <Home className="w-5 h-5" />
                     </Link>
-                    <h1 className="text-xl font-bold text-gray-900">Agentes</h1>
                 </div>
             </div>
 

@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Clock } from 'lucide-react'
+import { ArrowLeft, Clock, Home } from 'lucide-react'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import PrometeoAdmin from './prometeo-admin'
@@ -31,6 +31,9 @@ export default async function PrometeoPage() {
                             <h1 className="text-lg font-bold text-gray-900">Prometeo</h1>
                         </div>
                     </div>
+                    <Link href="/" className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500" title="Ir a inicio">
+                        <Home className="w-5 h-5" />
+                    </Link>
                 </div>
             </div>
 

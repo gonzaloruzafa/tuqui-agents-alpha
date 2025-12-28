@@ -164,6 +164,9 @@ Genera una notificación concisa (máximo 200 caracteres) con la información so
                 link: `/chat/${agent.slug}`
             }
 
+            console.log(`[Prometeo] Sending notifications to recipients:`, task.recipients)
+            console.log(`[Prometeo] Notification type:`, task.notification_type)
+            
             const result = await sendNotifications({
                 db,
                 recipients: task.recipients,
@@ -172,6 +175,7 @@ Genera una notificación concisa (máximo 200 caracteres) con la información so
                 taskId: task.id
             })
 
+            console.log(`[Prometeo] Notification result:`, result)
             execution.notification_sent = result.inAppSent > 0 || result.pushSent > 0 || result.emailSent > 0
         }
 

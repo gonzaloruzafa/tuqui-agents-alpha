@@ -6,11 +6,20 @@ export const authConfig = {
         Google({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            authorization: {
+                params: {
+                    prompt: "consent",
+                    access_type: "offline",
+                    response_type: "code"
+                }
+            }
         }),
     ],
     pages: {
         signIn: "/login",
+        error: "/login", // Redirect errors to login instead of error page
     },
+    debug: process.env.NODE_ENV === 'development',
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user

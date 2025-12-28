@@ -45,6 +45,8 @@ export interface NotifyResult {
 export async function sendNotifications(options: NotifyOptions): Promise<NotifyResult> {
     const { db, recipients, notificationType, payload, taskId } = options
     
+    console.log(`[Notifier] Starting with: type=${notificationType}, recipients=${JSON.stringify(recipients)}`)
+    
     const result: NotifyResult = {
         inAppSent: 0,
         pushSent: 0,
@@ -56,14 +58,19 @@ export async function sendNotifications(options: NotifyOptions): Promise<NotifyR
     const shouldSendPush = ['push', 'push_and_email', 'all'].includes(notificationType)
     const shouldSendEmail = ['email', 'push_and_email', 'all'].includes(notificationType)
     
+    console.log(`[Notifier] Flags: inApp=${shouldSendInApp}, push=${shouldSendPush}, email=${shouldSendEmail}`)
+    
     for (const recipientEmail of recipients) {
         // 1. In-App Notification (always saved for record, optionally marked)
         if (shouldSendInApp || shouldSendPush || shouldSendEmail) {
             try {
                 await saveInAppNotification(db, recipientEmail, payload, taskId)
+                console.log(`[Notifier] Saved in-app notification for: ${recipientEmail}`)
                 result.inAppSent++
             } catch (e) {
-                result.errors.push(`[in_app] ${recipientEmail}: ${e instanceof Error ? e.message : 'Unknown error'}`)
+                const errorMsg = `[in_app] ${recipientEmail}: ${e instanceof Error ? e.message : 'Unknown error'}`
+                console.error(`[Notifier] Error:`, errorMsg)
+                result.errors.push(errorMsg)
             }
         }
         

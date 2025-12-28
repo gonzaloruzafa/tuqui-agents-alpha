@@ -1,5 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { getTenantClient } from '@/lib/supabase/tenant'
+import { generateText } from 'ai'
+import { google } from '@ai-sdk/google'
 
 export async function GET(req: Request) {
     const session = await auth()
@@ -86,20 +88,51 @@ export async function POST(req: Request) {
         const { sessionId, userMessage } = body
         const db = await getTenantClient(session.tenant.id)
 
-        // Simple logic for Alpha: first 40 chars of user message
-        // In the future, this could use Gemini to summarize
-        const title = userMessage.length > 40 
-            ? userMessage.substring(0, 40).trim() + '...' 
-            : userMessage.trim()
+        let title: string
+        
+        try {
+            // Use Gemini to generate a concise, meaningful title
+            const { text } = await generateText({
+                model: google('gemini-2.0-flash'),
+                prompt: `Genera un título MUY breve (máximo 6 palabras) que resuma la intención del siguiente mensaje de usuario.
 
-        const { data, error } = await db
+Mensaje: "${userMessage}"
+
+Reglas:
+- Primera letra en mayúscula
+- Sin comillas
+- Sin puntos finales
+- Debe ser descriptivo del tema, no una copia literal
+- Ejemplos buenos: "Consulta de stock productos", "Ventas del mes", "Problema con factura"
+
+Título:`
+            })
+            
+            title = text.trim()
+                .replace(/^["']|["']$/g, '') // Remove quotes
+                .replace(/\.$/g, '') // Remove trailing period
+                .substring(0, 50) // Safety limit
+            
+            // Capitalize first letter
+            if (title.length > 0) {
+                title = title.charAt(0).toUpperCase() + title.slice(1)
+            }
+        } catch (error) {
+            console.error('Error generating title:', error)
+            // Fallback to simple truncation
+            title = userMessage.length > 40 
+                ? userMessage.substring(0, 40).trim() + '...' 
+                : userMessage.trim()
+        }
+
+        const { data, error: dbError } = await db
             .from('chat_sessions')
             .update({ title })
             .eq('id', sessionId)
             .select('title')
             .single()
 
-        if (error) return new Response(error.message, { status: 500 })
+        if (dbError) return new Response(dbError.message, { status: 500 })
         return Response.json(data)
     }
 
