@@ -26,7 +26,8 @@ const AudioVisualizer = ({ isRecording }: { isRecording: boolean }) => {
     const analyserRef = useRef<AnalyserNode | null>(null)
     const dataArrayRef = useRef<Uint8Array | null>(null)
     const animationRef = useRef<number | null>(null)
-    const historyRef = useRef<number[]>(new Array(60).fill(0)) // Store last 60 volume levels
+    const historyRef = useRef<number[]>(new Array(100).fill(0)) // Store more history for slower scroll
+    const frameCountRef = useRef(0)
 
     useEffect(() => {
         if (!isRecording) {
@@ -62,39 +63,43 @@ const AudioVisualizer = ({ isRecording }: { isRecording: boolean }) => {
                     const height = canvas.height
 
                     animationRef.current = requestAnimationFrame(draw)
-                    analyserRef.current.getByteFrequencyData(dataArrayRef.current as any)
 
-                    // Calculate average volume
-                    let sum = 0
-                    for (let i = 0; i < dataArrayRef.current.length; i++) {
-                        sum += dataArrayRef.current[i]
+                    // Throttle updates even more to slow down the scroll (update every 4 frames)
+                    frameCountRef.current++
+                    if (frameCountRef.current % 4 === 0) {
+                        analyserRef.current.getByteFrequencyData(dataArrayRef.current as any)
+
+                        // Calculate average volume
+                        let sum = 0
+                        for (let i = 0; i < dataArrayRef.current.length; i++) {
+                            sum += dataArrayRef.current[i]
+                        }
+                        const average = sum / dataArrayRef.current.length
+
+                        // Update history (scroll effect)
+                        historyRef.current.shift()
+                        historyRef.current.push(average)
                     }
-                    const average = sum / dataArrayRef.current.length
-
-                    // Update history (scroll effect)
-                    historyRef.current.shift()
-                    historyRef.current.push(average)
 
                     ctx.clearRect(0, 0, width, height)
 
-                    const barWidth = 2
-                    const gap = 3
+                    const barWidth = 0.8 // Muy fino
+                    const gap = 2.5
                     const totalBarWidth = barWidth + gap
                     const barsToDraw = historyRef.current.length
 
-                    ctx.fillStyle = '#a78bfa' // Subtle Light Violet
+                    ctx.fillStyle = '#a78bfa' // Subtle Light Violet (discrete)
 
                     for (let i = 0; i < barsToDraw; i++) {
-                        // Calculate bar height based on history, with a minimum height for the 'silent' look
                         const vol = historyRef.current[i]
-                        const barHeight = Math.max(2, (vol / 128) * height * 0.8)
+                        // Make height a bit more discrete too
+                        const barHeight = Math.max(1, (vol / 160) * height * 0.6)
 
                         const x = i * totalBarWidth
                         const y = (height - barHeight) / 2
 
-                        // Round corners for the bars
                         ctx.beginPath()
-                        ctx.roundRect(x, y, barWidth, barHeight, 1)
+                        ctx.roundRect(x, y, barWidth, barHeight, 0.4)
                         ctx.fill()
                     }
                 }
