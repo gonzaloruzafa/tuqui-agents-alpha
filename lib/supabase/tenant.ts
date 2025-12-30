@@ -18,7 +18,8 @@ export async function getTenantConfig(tenantId: string) {
     return {
         url: tenant.supabase_url,
         anonKey: tenant.supabase_anon_key,
-        serviceKey: tenant.supabase_service_key
+        serviceKey: tenant.supabase_service_key,
+        schema: tenant.schema_name || 'public'
     }
 }
 
@@ -29,13 +30,18 @@ export async function getTenantClient(tenantId: string) {
 
     const config = await getTenantConfig(tenantId)
     // Usamos service key para operaciones de servidor
-    const client = createClient(config.url, config.serviceKey)
+    // Importante: db: { schema: ... } asegura que este cliente solo vea ese schema
+    const client = createClient(config.url, config.serviceKey, {
+        db: {
+            schema: config.schema
+        }
+    })
     tenantClients.set(tenantId, client)
     return client
 }
 
 // Helpers para Auth
-export async function getTenantForUser(email: string): Promise<{ id: string; name: string; slug: string } | null> {
+export async function getTenantForUser(email: string): Promise<{ id: string; name: string; slug: string; schema: string } | null> {
     const master = getMasterClient()
     const { data: user } = await master
         .from('users')
@@ -44,8 +50,15 @@ export async function getTenantForUser(email: string): Promise<{ id: string; nam
         .single()
 
     // tenants is returned as an array when using (*), get first item
-    const tenant = Array.isArray(user?.tenants) ? user.tenants[0] : user?.tenants
-    return tenant || null
+    const tenantData = Array.isArray(user?.tenants) ? user.tenants[0] : user?.tenants
+    if (!tenantData) return null
+
+    return {
+        id: tenantData.id,
+        name: tenantData.name,
+        slug: tenantData.slug,
+        schema: tenantData.schema_name || 'public'
+    }
 }
 
 export async function isUserAdmin(email: string) {

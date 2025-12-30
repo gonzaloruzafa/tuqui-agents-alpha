@@ -1,71 +1,25 @@
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, UserPlus, Trash2, Mail, Shield, ShieldCheck, ShieldOff, Home, Users } from 'lucide-react'
+import { ArrowLeft, UserPlus, Users, Trash2, Shield, ShieldCheck, Mail, Home } from 'lucide-react'
 import { getMasterClient } from '@/lib/supabase/master'
-import { revalidatePath } from 'next/cache'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
+import { addUser, deleteUser, updateUserRole } from './actions'
 
-async function getUsers(tenantId: string) {
-    const master = getMasterClient()
-    const { data: users, error } = await master
+async function getTenantUsers(tenantId: string) {
+    const db = getMasterClient()
+    const { data, error } = await db
         .from('users')
         .select('*')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
 
-    if (error) throw error
-    return users
-}
-
-async function addUser(formData: FormData) {
-    'use server'
-    const email = formData.get('email') as string
-    const isAdmin = formData.get('is_admin') === 'on'
-    const session = await auth()
-
-    if (!session?.tenant?.id || !session.isAdmin) return
-
-    const master = getMasterClient()
-    await master.from('users').upsert({
-        tenant_id: session.tenant.id,
-        email: email,
-        name: email.split('@')[0], // Simple default name
-        is_admin: isAdmin
-    }, { onConflict: 'tenant_id, email' })
-
-    revalidatePath('/admin/users')
-}
-
-async function toggleAdmin(formData: FormData) {
-    'use server'
-    const userId = formData.get('userId') as string
-    const currentIsAdmin = formData.get('currentIsAdmin') === 'true'
-    const session = await auth()
-
-    if (!session?.tenant?.id || !session.isAdmin) return
-
-    const master = getMasterClient()
-    await master.from('users')
-        .update({ is_admin: !currentIsAdmin })
-        .eq('id', userId)
-        .eq('tenant_id', session.tenant.id)
-
-    revalidatePath('/admin/users')
-}
-
-async function removeUser(formData: FormData) {
-    'use server'
-    const userId = formData.get('userId') as string
-    const session = await auth()
-
-    if (!session?.tenant?.id || !session.isAdmin) return
-
-    const master = getMasterClient()
-    await master.from('users').delete().eq('id', userId).eq('tenant_id', session.tenant.id)
-
-    revalidatePath('/admin/users')
+    if (error) {
+        console.error('Error fetching users:', error)
+        return []
+    }
+    return data || []
 }
 
 export default async function AdminUsersPage() {
@@ -75,7 +29,7 @@ export default async function AdminUsersPage() {
         redirect('/')
     }
 
-    const users = await getUsers(session.tenant!.id)
+    const users = await getTenantUsers(session.tenant!.id)
 
     return (
         <div className="min-h-screen bg-gray-50/50 font-sans flex flex-col">
@@ -88,10 +42,10 @@ export default async function AdminUsersPage() {
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-adhoc-coral/10 rounded-lg flex items-center justify-center">
-                                <Users className="w-4 h-4 text-adhoc-coral" />
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Users className="w-4 h-4 text-blue-600" />
                             </div>
-                            <h1 className="text-lg font-bold text-gray-900">Usuarios</h1>
+                            <h1 className="text-lg font-bold text-gray-900">Gestión de Usuarios</h1>
                         </div>
                     </div>
                     <Link href="/" className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500" title="Ir a inicio">
@@ -101,80 +55,131 @@ export default async function AdminUsersPage() {
             </div>
 
             <div className="flex-grow max-w-4xl mx-auto px-6 py-8 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
-                {/* Invite Box */}
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-8">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <UserPlus className="w-5 h-5 text-adhoc-violet" />
-                        Invitar Usuario
-                    </h2>
-                    <form action={addUser} className="space-y-4">
-                        <div className="flex gap-4">
-                            <input
-                                name="email"
-                                type="email"
-                                placeholder="nombre@empresa.com"
-                                required
-                                className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-adhoc-violet focus:outline-none"
-                            />
-                            <button type="submit" className="bg-adhoc-violet hover:bg-adhoc-violet/90 text-white font-medium px-6 py-2 rounded-lg transition-colors">
-                                Agregar
-                            </button>
-                        </div>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="is_admin" className="w-4 h-4 text-adhoc-violet rounded border-gray-300 focus:ring-adhoc-violet" />
-                            <span className="text-sm text-gray-600">Dar permisos de administrador</span>
-                        </label>
-                    </form>
-                </div>
-
-                {/* Users List */}
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-200 bg-gray-50/50 flex justify-between items-center">
-                        <h3 className="font-semibold text-gray-700">Miembros del Equipo ({users.length})</h3>
-                    </div>
-
-                    <ul className="divide-y divide-gray-100">
-                        {users.map(user => (
-                            <li key={user.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${user.is_admin ? 'bg-adhoc-lavender' : 'bg-gray-100'}`}>
-                                        {user.is_admin ? <Shield className="w-5 h-5 text-adhoc-violet" /> : <Mail className="w-5 h-5 text-gray-500" />}
+                    {/* Add User Sidebar */}
+                    <div className="md:col-span-1">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden sticky top-24">
+                            <div className="p-5 border-b border-gray-100 bg-gray-50/30">
+                                <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                                    <UserPlus className="w-4 h-4 text-blue-600" />
+                                    Invitar Usuario
+                                </h2>
+                            </div>
+                            <div className="p-5">
+                                <form action={addUser} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                                            Email del Usuario
+                                        </label>
+                                        <div className="relative">
+                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                name="email"
+                                                type="email"
+                                                required
+                                                placeholder="usuario@empresa.com"
+                                                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                            />
+                                        </div>
                                     </div>
                                     <div>
-                                        <p className="font-medium text-gray-900">{user.email}</p>
-                                        <p className="text-xs text-gray-500">{user.name || 'Sin nombre'} • {user.is_admin ? 'Admin' : 'Usuario'}</p>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                                            Rol Inicial
+                                        </label>
+                                        <select
+                                            name="role"
+                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        >
+                                            <option value="user">Usuario Estándar</option>
+                                            <option value="admin">Administrador</option>
+                                        </select>
                                     </div>
-                                </div>
+                                    <button
+                                        type="submit"
+                                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                                    >
+                                        Agregar al Equipo
+                                    </button>
+                                </form>
+                                <p className="mt-4 text-xs text-gray-400 leading-relaxed">
+                                    El usuario podrá ingresar directamente con su cuenta de Google una vez que lo agregues.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-                                {session.user?.email !== user.email && (
-                                    <div className="flex items-center gap-2">
-                                        {/* Toggle Admin */}
-                                        <form action={toggleAdmin}>
-                                            <input type="hidden" name="userId" value={user.id} />
-                                            <input type="hidden" name="currentIsAdmin" value={String(user.is_admin)} />
-                                            <button 
-                                                type="submit" 
-                                                className={`p-2 rounded-lg transition-colors ${user.is_admin ? 'text-adhoc-violet hover:bg-adhoc-lavender' : 'text-gray-400 hover:text-adhoc-violet hover:bg-gray-100'}`}
-                                                title={user.is_admin ? 'Quitar admin' : 'Hacer admin'}
+                    {/* Users List */}
+                    <div className="md:col-span-2 space-y-4">
+                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider px-1">
+                            Usuarios Activos ({users.length})
+                        </h3>
+
+                        <div className="space-y-3">
+                            {users.map((u) => (
+                                <div key={u.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between group hover:border-blue-200 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium ${u.is_admin ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                                            {u.email[0].toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-semibold text-gray-900">{u.email}</span>
+                                                {u.is_admin ? (
+                                                    <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-tight flex items-center gap-1">
+                                                        <ShieldCheck className="w-3 h-3" />
+                                                        Admin
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 text-[10px] font-bold uppercase tracking-tight">
+                                                        User
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-0.5">
+                                                Agregado el {new Date(u.created_at).toLocaleDateString('es-AR')}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {/* Toggle Admin Role Action */}
+                                        <form action={async () => {
+                                            'use server'
+                                            await updateUserRole(u.id, !u.is_admin)
+                                        }}>
+                                            <button
+                                                type="submit"
+                                                disabled={u.email === session.user?.email} // Can't demote self
+                                                className={`p-2 rounded-lg transition-colors ${u.is_admin ? 'text-blue-400 hover:bg-blue-50' : 'text-gray-300 hover:bg-gray-100'}`}
+                                                title={u.is_admin ? "Quitar Admin" : "Hacer Admin"}
                                             >
-                                                {user.is_admin ? <ShieldCheck className="w-5 h-5" /> : <ShieldOff className="w-5 h-5" />}
+                                                <Shield className="w-4 h-4" />
                                             </button>
                                         </form>
-                                        {/* Delete */}
-                                        <form action={removeUser}>
-                                            <input type="hidden" name="userId" value={user.id} />
-                                            <button type="submit" className="text-gray-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors" title="Eliminar usuario">
+
+                                        {/* Delete User Action */}
+                                        <form action={async () => {
+                                            'use server'
+                                            if (confirm('¿Estás seguro de eliminar a este usuario?')) {
+                                                await deleteUser(u.id)
+                                            }
+                                        }}>
+                                            <button
+                                                type="submit"
+                                                disabled={u.email === session.user?.email}
+                                                className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Eliminar Usuario"
+                                            >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </form>
                                     </div>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-
             </div>
 
             <Footer />

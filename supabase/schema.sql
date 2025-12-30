@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL,
+  schema_name TEXT UNIQUE, -- New column for Schema isolation
   supabase_url TEXT,
   supabase_anon_key TEXT,
   supabase_service_key TEXT,

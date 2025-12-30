@@ -6,6 +6,7 @@ declare module "next-auth" {
             id: string
             name: string
             slug: string
+            schema: string
         } | null
         isAdmin?: boolean
         user: {
