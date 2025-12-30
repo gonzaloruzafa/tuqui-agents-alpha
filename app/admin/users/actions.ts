@@ -5,33 +5,43 @@ import { getMasterClient } from '@/lib/supabase/master'
 import { revalidatePath } from 'next/cache'
 
 export async function addUser(formData: FormData) {
-    const session = await auth()
-    if (!session?.tenant?.id || !session.isAdmin) {
-        throw new Error('No autorizado')
+    console.log('🚀 Starting addUser action')
+    try {
+        const session = await auth()
+        if (!session?.tenant?.id || !session.isAdmin) {
+            console.error('❌ Unauthorized attempt to add user')
+            throw new Error('No autorizado')
+        }
+
+        const email = (formData.get('email') as string)?.toLowerCase().trim()
+        const role = formData.get('role') as string || 'user'
+        const is_admin = role === 'admin'
+
+        if (!email) throw new Error('Email es requerido')
+
+        console.log(`👤 Adding user ${email} to tenant ${session.tenant.id}`)
+
+        const db = getMasterClient()
+        const { error } = await db
+            .from('users')
+            .upsert({
+                email,
+                tenant_id: session.tenant.id,
+                role,
+                is_admin
+            }, { onConflict: 'email' })
+
+        if (error) {
+            console.error('❌ Supabase error adding user:', error)
+            throw new Error('Error al agregar usuario: ' + error.message)
+        }
+
+        console.log('✅ User added successfully')
+        revalidatePath('/admin/users')
+    } catch (e: any) {
+        console.error('🔥 Server Action Error (addUser):', e)
+        throw e // Re-throw to be caught by the action handler, but now we have logs
     }
-
-    const email = formData.get('email') as string
-    const role = formData.get('role') as string || 'user'
-    const is_admin = role === 'admin'
-
-    if (!email) throw new Error('Email es requerido')
-
-    const db = getMasterClient()
-    const { error } = await db
-        .from('users')
-        .upsert({
-            email,
-            tenant_id: session.tenant.id,
-            role,
-            is_admin
-        }, { onConflict: 'email' })
-
-    if (error) {
-        console.error('Error adding user:', error)
-        throw new Error('Error al agregar usuario: ' + error.message)
-    }
-
-    revalidatePath('/admin/users')
 }
 
 export async function deleteUser(userId: string) {

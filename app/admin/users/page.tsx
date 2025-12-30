@@ -1,11 +1,12 @@
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, UserPlus, Users, Trash2, Shield, ShieldCheck, Mail, Home } from 'lucide-react'
+import { ArrowLeft, UserPlus, Users, Mail, Home } from 'lucide-react'
 import { getMasterClient } from '@/lib/supabase/master'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
-import { addUser, deleteUser, updateUserRole } from './actions'
+import { addUser } from './actions'
+import { UserList } from './UserList'
 
 async function getTenantUsers(tenantId: string) {
     const db = getMasterClient()
@@ -115,69 +116,7 @@ export default async function AdminUsersPage() {
                             Usuarios Activos ({users.length})
                         </h3>
 
-                        <div className="space-y-3">
-                            {users.map((u) => (
-                                <div key={u.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between group hover:border-blue-200 transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium ${u.is_admin ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
-                                            {u.email[0].toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm font-semibold text-gray-900">{u.email}</span>
-                                                {u.is_admin ? (
-                                                    <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-tight flex items-center gap-1">
-                                                        <ShieldCheck className="w-3 h-3" />
-                                                        Admin
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 text-[10px] font-bold uppercase tracking-tight">
-                                                        User
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-xs text-gray-400 mt-0.5">
-                                                Agregado el {new Date(u.created_at).toLocaleDateString('es-AR')}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        {/* Toggle Admin Role Action */}
-                                        <form action={async () => {
-                                            'use server'
-                                            await updateUserRole(u.id, !u.is_admin)
-                                        }}>
-                                            <button
-                                                type="submit"
-                                                disabled={u.email === session.user?.email} // Can't demote self
-                                                className={`p-2 rounded-lg transition-colors ${u.is_admin ? 'text-blue-400 hover:bg-blue-50' : 'text-gray-300 hover:bg-gray-100'}`}
-                                                title={u.is_admin ? "Quitar Admin" : "Hacer Admin"}
-                                            >
-                                                <Shield className="w-4 h-4" />
-                                            </button>
-                                        </form>
-
-                                        {/* Delete User Action */}
-                                        <form action={async () => {
-                                            'use server'
-                                            if (confirm('¿Estás seguro de eliminar a este usuario?')) {
-                                                await deleteUser(u.id)
-                                            }
-                                        }}>
-                                            <button
-                                                type="submit"
-                                                disabled={u.email === session.user?.email}
-                                                className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Eliminar Usuario"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        <UserList initialUsers={users} currentUserEmail={session.user?.email || ''} />
                     </div>
                 </div>
             </div>
