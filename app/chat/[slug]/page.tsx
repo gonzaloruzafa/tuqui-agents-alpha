@@ -9,7 +9,7 @@ import {
     Bot, Brain, Code, Lightbulb, MessageSquare, Sparkles,
     GraduationCap, Heart, ShoppingCart, TrendingUp, Wrench,
     FileText, Calculator, Globe, Shield, Zap, Mail, Copy, Check,
-    PanelLeftClose, PanelLeft, Search, Database
+    PanelLeftClose, PanelLeft, Search, Database, Mic, MicOff
 } from 'lucide-react'
 import { marked } from 'marked'
 
@@ -70,6 +70,59 @@ export default function ChatPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [sessions, setSessions] = useState<Session[]>([])
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionIdParam)
+    const [isRecording, setIsRecording] = useState(false)
+    const [recognition, setRecognition] = useState<any>(null)
+
+    // Setup Speech Recognition
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+            if (SpeechRecognition) {
+                const rec = new SpeechRecognition()
+                rec.lang = 'es-AR'
+                rec.continuous = false
+                rec.interimResults = false
+
+                rec.onresult = (event: any) => {
+                    const transcript = event.results[0][0].transcript
+                    setInput(prev => {
+                        const base = prev.trim()
+                        return base ? `${base} ${transcript}` : transcript
+                    })
+                    setIsRecording(false)
+                }
+
+                rec.onerror = (event: any) => {
+                    console.error('Speech recognition error:', event.error)
+                    setIsRecording(false)
+                }
+
+                rec.onend = () => {
+                    setIsRecording(false)
+                }
+
+                setRecognition(rec)
+            }
+        }
+    }, [])
+
+    const toggleRecording = () => {
+        if (!recognition) {
+            alert('Tu navegador no soporta reconocimiento de voz.')
+            return
+        }
+        if (isRecording) {
+            recognition.stop()
+        } else {
+            try {
+                recognition.start()
+                setIsRecording(true)
+            } catch (e) {
+                recognition.stop()
+                setIsRecording(false)
+            }
+        }
+    }
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -189,7 +242,10 @@ export default function ChatPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     agentSlug,
-                    messages: [{ role: 'user', content: userContent }],
+                    messages: [...messages, tempUserMsg].map(m => ({
+                        role: m.role,
+                        content: m.rawContent || m.content
+                    })),
                     sessionId: sid
                 })
             })
@@ -438,12 +494,23 @@ export default function ChatPage() {
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
                             placeholder={agent.placeholder_text}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-4 pr-12 py-3 resize-none focus:outline-none focus:border-adhoc-violet focus:ring-2 focus:ring-adhoc-lavender/50 focus:bg-white transition-all"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-4 pr-24 py-3 resize-none focus:outline-none focus:border-adhoc-violet focus:ring-2 focus:ring-adhoc-lavender/50 focus:bg-white transition-all"
                             rows={1}
                         />
-                        <button onClick={handleSend} disabled={isLoading || !input.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-adhoc-violet text-white rounded-xl hover:bg-adhoc-violet/90 hover:shadow-md transition-all disabled:opacity-50">
-                            <Send className="w-4 h-4" />
-                        </button>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            {recognition && (
+                                <button
+                                    onClick={toggleRecording}
+                                    className={`p-2.5 rounded-xl transition-all ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                    title={isRecording ? 'Detener grabación' : 'Dictar mensaje'}
+                                >
+                                    {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                                </button>
+                            )}
+                            <button onClick={handleSend} disabled={isLoading || !input.trim()} className="p-2.5 bg-adhoc-violet text-white rounded-xl hover:bg-adhoc-violet/90 hover:shadow-md transition-all disabled:opacity-50">
+                                <Send className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
                     <p className="text-center text-xs text-gray-400 mt-2">IA puede cometer errores.</p>
                 </div>

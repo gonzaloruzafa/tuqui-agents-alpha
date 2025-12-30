@@ -69,12 +69,12 @@ function getCacheKey(tenantId: string, query: OdooSubQuery): string {
 function getFromCache(key: string): any | null {
     const entry = queryCache.get(key)
     if (!entry) return null
-    
+
     if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
         queryCache.delete(key)
         return null
     }
-    
+
     return entry.data
 }
 
@@ -203,12 +203,12 @@ export function buildDomain(filters: string, model: string): any[] {
     const domain: any[] = []
     const config = MODEL_CONFIG[model] || { dateField: 'create_date', defaultFields: [] }
     const dateField = config.dateField
-    
+
     // ---- DATE PATTERNS ----
     const now = new Date()
     const currentYear = now.getFullYear()
     const currentMonth = now.getMonth() + 1
-    
+
     // Specific months
     const monthPatterns = [
         { regex: /enero|january/i, month: 1 },
@@ -224,9 +224,9 @@ export function buildDomain(filters: string, model: string): any[] {
         { regex: /noviembre|november/i, month: 11 },
         { regex: /diciembre|december/i, month: 12 },
     ]
-    
+
     let dateMatched = false
-    
+
     for (const { regex, month } of monthPatterns) {
         if (regex.test(filters)) {
             const year = month > currentMonth ? currentYear - 1 : currentYear
@@ -239,7 +239,7 @@ export function buildDomain(filters: string, model: string): any[] {
             break
         }
     }
-    
+
     // "Este mes" / "this month"
     if (!dateMatched && /este mes|this month|mes actual/i.test(filters)) {
         const month = String(currentMonth).padStart(2, '0')
@@ -250,7 +250,7 @@ export function buildDomain(filters: string, model: string): any[] {
         domain.push([dateField, '<=', endDate])
         dateMatched = true
     }
-    
+
     // "Mes pasado" / "last month"
     if (!dateMatched && /mes pasado|mes anterior|last month/i.test(filters)) {
         const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1
@@ -263,7 +263,7 @@ export function buildDomain(filters: string, model: string): any[] {
         domain.push([dateField, '<=', endDate])
         dateMatched = true
     }
-    
+
     // "Últimos X días" / "last X days"
     const lastDaysMatch = filters.match(/(?:ultimos?|últimos?|last)\s*(\d+)\s*(?:dias?|days)/i)
     if (!dateMatched && lastDaysMatch) {
@@ -273,14 +273,14 @@ export function buildDomain(filters: string, model: string): any[] {
         domain.push([dateField, '>=', startDate.toISOString().split('T')[0]])
         dateMatched = true
     }
-    
+
     // "Este año" / "this year"
     if (!dateMatched && /este año|this year|año actual/i.test(filters)) {
         domain.push([dateField, '>=', `${currentYear}-01-01`])
         domain.push([dateField, '<=', `${currentYear}-12-31`])
         dateMatched = true
     }
-    
+
     // ---- STATE FILTERS ----
     const stateMap = config.states || {}
     for (const [keyword, stateValue] of Object.entries(stateMap)) {
@@ -289,7 +289,7 @@ export function buildDomain(filters: string, model: string): any[] {
             break
         }
     }
-    
+
     // For account.move, add payment_state filters
     if (model === 'account.move') {
         if (/pagad[oa]s?|paid/i.test(filters)) {
@@ -297,12 +297,12 @@ export function buildDomain(filters: string, model: string): any[] {
         } else if (/por cobrar|pendiente|not paid|impag/i.test(filters)) {
             domain.push(['payment_state', '=', 'not_paid'])
         }
-        
+
         // Default to posted invoices
         if (!domain.some(d => d[0] === 'state')) {
             domain.push(['state', '=', 'posted'])
         }
-        
+
         // Invoice type
         if (/factura.*cliente|customer.*invoice|out_invoice|por cobrar|receivable|venta/i.test(filters)) {
             domain.push(['move_type', '=', 'out_invoice'])
@@ -312,7 +312,7 @@ export function buildDomain(filters: string, model: string): any[] {
             domain.push(['move_type', 'in', ['out_refund', 'in_refund']])
         }
     }
-    
+
     // ---- PARTNER FILTERS ----
     if (/cliente|customer/i.test(filters) && model === 'res.partner') {
         domain.push(['customer_rank', '>', 0])
@@ -320,7 +320,7 @@ export function buildDomain(filters: string, model: string): any[] {
     if (/proveedor|vendor|supplier/i.test(filters) && model === 'res.partner') {
         domain.push(['supplier_rank', '>', 0])
     }
-    
+
     // ---- USER ACTIVITY FILTERS ----
     if (model === 'res.users') {
         if (/inactiv|sin conectar|no conecta|mucho.*que.*no/i.test(filters)) {
@@ -333,7 +333,7 @@ export function buildDomain(filters: string, model: string): any[] {
             domain.push(['active', '=', true])
         }
     }
-    
+
     // ---- CRM FILTERS ----
     if (model === 'crm.lead') {
         if (/oportunidad|opportunity/i.test(filters)) {
@@ -348,7 +348,7 @@ export function buildDomain(filters: string, model: string): any[] {
             domain.push(['active', '=', false])
         }
     }
-    
+
     // ---- PAYMENT FILTERS ----
     if (model === 'account.payment') {
         // Payment type: inbound (cobros) vs outbound (pagos)
@@ -357,13 +357,13 @@ export function buildDomain(filters: string, model: string): any[] {
         } else if (/outbound|pago|pag[oa]mos?|realiz[oa]d[oa]/i.test(filters)) {
             domain.push(['payment_type', '=', 'outbound'])
         }
-        
+
         // Default to paid payments (not 'posted' - account.payment uses 'paid' state)
         if (!domain.some(d => d[0] === 'state')) {
             domain.push(['state', '=', 'paid'])
         }
     }
-    
+
     // ---- SALE ORDER LINE FILTERS ----
     if (model === 'sale.order.line') {
         // Default to confirmed orders
@@ -371,14 +371,44 @@ export function buildDomain(filters: string, model: string): any[] {
             domain.push(['state', 'in', ['sale', 'done']])
         }
     }
-    
-    // ---- TODAY FILTER ----
+
+    // ---- STRUCTURED FILTERS (field: value or field = value) ----
+    // Improved regex to handle quoted values or values with spaces
+    // Supports: field: value, field: "value with spaces", field = value
+    const structuredMatch = filters.match(/(\w+)\s*[:=]\s*(?:'([^']+)'|"([^"]+)"|([^ \n]+(?: [^ \n]+)*))/g)
+
+    if (structuredMatch) {
+        for (const match of structuredMatch) {
+            const parts = match.split(/[:=]/)
+            const field = parts[0].trim()
+            let value = parts.slice(1).join(':').trim()
+
+            // Remove quotes if present
+            value = value.replace(/^['"]|['"]$/g, '')
+
+            if (field && value) {
+                // If value is a number, use '='
+                if (!isNaN(Number(value)) && !value.includes('-')) {
+                    domain.push([field, '=', Number(value)])
+                } else if (value.toLowerCase() === 'false') {
+                    domain.push([field, '=', false])
+                } else if (value.toLowerCase() === 'true') {
+                    domain.push([field, '=', true])
+                } else {
+                    // For strings, use 'ilike' (case-insensitive search in names/IDs)
+                    domain.push([field, 'ilike', value])
+                }
+            }
+        }
+    }
+
+    // ---- TODAY FILTER (moved here to allow combinations) ----
     if (/hoy|today/i.test(filters)) {
         const today = new Date().toISOString().split('T')[0]
         domain.push([dateField, '>=', today])
         domain.push([dateField, '<=', today])
     }
-    
+
     return domain
 }
 
@@ -396,7 +426,7 @@ async function executeSingleQuery(
 ): Promise<QueryResult> {
     const startTime = Date.now()
     const cacheKey = getCacheKey(tenantId, query)
-    
+
     // Check cache
     const cached = getFromCache(cacheKey)
     if (cached) {
@@ -408,63 +438,65 @@ async function executeSingleQuery(
             executionMs: Date.now() - startTime
         }
     }
-    
+
     try {
         const config = MODEL_CONFIG[query.model] || { dateField: 'create_date', defaultFields: [] }
         const domain = query.domain || (query.filters ? buildDomain(query.filters, query.model) : [])
         const fields = query.fields || config.defaultFields
         const limit = Math.min(query.limit || 50, 500) // Max 500 records
-        
+
         let result: Partial<QueryResult> = {}
-        
+
         switch (query.operation) {
             case 'search':
                 const searchData = await client.searchRead(query.model, domain, fields, limit, query.orderBy)
                 result = { data: searchData, count: searchData.length }
                 break
-                
+
             case 'count':
                 const count = await client.searchCount(query.model, domain)
                 result = { count }
                 break
-                
+
             case 'aggregate':
                 if (query.groupBy && query.groupBy.length > 0) {
                     // For aggregations, check if model has an amount field
                     const amountField = config.amountField
                     const hasAmountField = !!amountField
-                    
+
                     // Build aggregate fields - only add :sum if we have an amount field
-                    const aggregateFields = hasAmountField 
+                    const aggregateFields = hasAmountField
                         ? [...query.groupBy, `${amountField}:sum`]
                         : [...query.groupBy]
-                    
+
                     // Use readGroup for server-side aggregation
                     const groupData = await client.readGroup(
                         query.model,
                         domain,
                         aggregateFields,
                         query.groupBy,
-                        { 
-                            limit, 
+                        {
+                            limit,
                             orderBy: hasAmountField ? `${amountField} desc` : `${query.groupBy[0]}_count desc`
                         }
                     )
-                    
+
                     // Transform to grouped format
-                    const grouped: Record<string, { count: number; total: number }> = {}
-                    
+                    const grouped: Record<string, { count: number; total: number; id?: number }> = {}
+
                     for (const g of groupData) {
                         const groupKey: string = query.groupBy![0]
                         const keyValue: any = g[groupKey]
                         const name: string = Array.isArray(keyValue) ? keyValue[1] : (keyValue || 'Sin asignar')
+                        const id: number | undefined = Array.isArray(keyValue) ? keyValue[0] : (typeof keyValue === 'number' ? keyValue : undefined)
                         const count = g[`${groupKey}_count`] || g['__count'] || 1
                         grouped[name] = {
                             count,
-                            total: hasAmountField ? (g[amountField] || 0) : count
+                            total: hasAmountField ? (g[amountField] || 0) : count,
+                            id
                         }
                     }
-                    
+
                     // Sort by total (or count if no amount) descending
                     const sortedGrouped: Record<string, { count: number; total: number }> = {}
                     Object.entries(grouped)
@@ -472,9 +504,9 @@ async function executeSingleQuery(
                         .forEach(([key, value]) => {
                             sortedGrouped[key] = value
                         })
-                    
-                    result = { 
-                        grouped: sortedGrouped, 
+
+                    result = {
+                        grouped: sortedGrouped,
                         count: groupData.length,
                         total: Object.values(grouped).reduce((sum, g) => sum + g.total, 0)
                     }
@@ -485,16 +517,16 @@ async function executeSingleQuery(
                     result = { count: aggData.length, total }
                 }
                 break
-                
+
             case 'fields':
                 const fieldsData = await client.fieldsGet(query.model)
                 result = { data: [fieldsData] }
                 break
-                
+
             case 'discover':
                 // Discover fields for a model - useful when agent doesn't know the schema
                 const discovered = await client.discoverFields(query.model)
-                result = { 
+                result = {
                     data: [{
                         model: query.model,
                         dateFields: discovered.dateFields,
@@ -506,10 +538,10 @@ async function executeSingleQuery(
                 }
                 break
         }
-        
+
         // Cache the result
         setCache(cacheKey, result)
-        
+
         return {
             queryId: query.id,
             success: true,
@@ -517,7 +549,7 @@ async function executeSingleQuery(
             cached: false,
             executionMs: Date.now() - startTime
         }
-        
+
     } catch (error: any) {
         return {
             queryId: query.id,
@@ -538,12 +570,12 @@ export async function executeQueries(
 ): Promise<QueryResult[]> {
     // Limit to 5 queries
     const limitedQueries = queries.slice(0, 5)
-    
+
     // Execute in parallel
     const results = await Promise.all(
         limitedQueries.map(q => executeSingleQuery(client, tenantId, q))
     )
-    
+
     return results
 }
 
@@ -560,7 +592,7 @@ export function generateChartData(
     title: string = 'Datos'
 ): ChartData | null {
     if (!result.success) return null
-    
+
     // For grouped data
     if (result.grouped) {
         const entries = Object.entries(result.grouped).slice(0, 10) // Top 10
@@ -578,21 +610,21 @@ export function generateChartData(
             }]
         }
     }
-    
+
     // For regular data with date field
     if (result.data && result.data.length > 0) {
         const sample = result.data[0]
         const hasDate = sample.date_order || sample.invoice_date || sample.create_date
-        
+
         if (hasDate && chartType === 'line') {
             // Time series chart
-            const dateField = sample.date_order ? 'date_order' : 
-                             sample.invoice_date ? 'invoice_date' : 'create_date'
-            const amountField = sample.amount_total !== undefined ? 'amount_total' : 
-                               sample.amount_residual !== undefined ? 'amount_residual' : null
-            
+            const dateField = sample.date_order ? 'date_order' :
+                sample.invoice_date ? 'invoice_date' : 'create_date'
+            const amountField = sample.amount_total !== undefined ? 'amount_total' :
+                sample.amount_residual !== undefined ? 'amount_residual' : null
+
             if (amountField) {
-                const sorted = [...result.data].sort((a, b) => 
+                const sorted = [...result.data].sort((a, b) =>
                     new Date(a[dateField]).getTime() - new Date(b[dateField]).getTime()
                 )
                 return {
@@ -607,6 +639,6 @@ export function generateChartData(
             }
         }
     }
-    
+
     return null
 }

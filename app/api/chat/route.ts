@@ -22,7 +22,7 @@ async function getCompanyContext(tenantId: string): Promise<string | null> {
             .select('company_context')
             .eq('id', tenantId)
             .single()
-        
+
         if (error || !data?.company_context) return null
         return data.company_context
     } catch (e) {
@@ -81,6 +81,9 @@ export async function POST(req: Request) {
             console.log('[Chat] Company context injected')
         }
 
+        // Add context persistence rule
+        systemSystem += '\n\nIMPORTANTE: Estás en una conversación fluida. Usa siempre los mensajes anteriores para entender referencias como "él", "eso", "ahora", o "qué productos?". No pidas aclaraciones si el contexto ya está en el historial.'
+
         if (agent.rag_enabled) {
             try {
                 console.log(`[Chat] RAG enabled for agent ${agent.slug}. Searching for: "${inputContent.substring(0, 50)}..."`)
@@ -97,7 +100,7 @@ export async function POST(req: Request) {
 
         // 4. Check if agent uses Odoo tools (use native Google SDK for these)
         const hasOdooTools = agent.tools?.some((t: string) => t.startsWith('odoo'))
-        
+
         console.log('[Chat] Loading tools for agent tools:', agent.tools, 'hasOdoo:', hasOdooTools)
 
         // 5. Generate Stream
@@ -105,28 +108,41 @@ export async function POST(req: Request) {
             // Use native Google SDK for Odoo agents (workaround for AI SDK bug with Gemini function calling)
             if (hasOdooTools) {
                 console.log('[Chat] Using native Gemini SDK for Odoo agent')
-                
+
                 // Convert message history to Gemini Content[] format
                 // Limit to last 20 messages to avoid context overflow
                 const MAX_HISTORY = 20
                 const historyMessages = messages.slice(
-                    Math.max(0, messages.length - 1 - MAX_HISTORY), 
+                    Math.max(0, messages.length - 1 - MAX_HISTORY),
                     -1  // Exclude last message (will be sent as userMessage)
                 )
-                const history = historyMessages.map((m: any) => ({
-                    role: m.role === 'assistant' ? 'model' : 'user',
-                    parts: [{ text: m.content }]
-                }))
-                
+                const history = historyMessages.map((m: any) => {
+                    let content = m.content
+                    if (m.role === 'assistant' && m.tool_calls) {
+                        try {
+                            const tools = typeof m.tool_calls === 'string' ? JSON.parse(m.tool_calls) : m.tool_calls
+                            if (Array.isArray(tools) && tools.length > 0) {
+                                content = `🔧 [Búsqueda Odoo: ${tools.map((t: any) => t.name).join(', ')}]\n\n${content}`
+                            }
+                        } catch (e) {
+                            console.warn('[Chat] Failed to parse tool_calls for history enrichment')
+                        }
+                    }
+                    return {
+                        role: m.role === 'assistant' ? 'model' : 'user',
+                        parts: [{ text: content }]
+                    }
+                })
+
                 console.log('[Chat] Passing history with', history.length, 'messages')
-                
+
                 const stream = streamChatWithOdoo(
                     tenantId,
                     systemSystem,
                     inputContent,
                     history
                 )
-                
+
                 const encoder = new TextEncoder()
                 const readable = new ReadableStream({
                     async start(controller) {
@@ -140,7 +156,7 @@ export async function POST(req: Request) {
                         }
                     }
                 })
-                
+
                 return new Response(readable, {
                     headers: { 'Content-Type': 'text/plain; charset=utf-8' }
                 })
@@ -155,9 +171,9 @@ export async function POST(req: Request) {
                 console.error('[Chat] Error loading tools:', toolsError)
             }
 
-            console.log('[Chat] Calling streamText with model: gemini-2.5-flash')
+            console.log('[Chat] Calling streamText with model: gemini-2.0-flash')
             const result = streamText({
-                model: google('gemini-2.5-flash'),
+                model: google('gemini-2.0-flash'),
                 system: systemSystem,
                 messages: messages.map((m: any) => ({
                     role: m.role as 'user' | 'assistant' | 'system',
@@ -180,7 +196,7 @@ export async function POST(req: Request) {
             })
 
             console.log('[Chat] streamText result keys:', Object.keys(result))
-            
+
             // Check for available response methods
             if (typeof (result as any).toDataStreamResponse === 'function') {
                 console.log('[Chat] Using toDataStreamResponse')
@@ -204,8 +220,8 @@ export async function POST(req: Request) {
             }
         } catch (streamError: any) {
             console.error('[Chat] Error in streamText execution:', streamError)
-            return new Response(JSON.stringify({ 
-                error: 'Error generating response', 
+            return new Response(JSON.stringify({
+                error: 'Error generating response',
                 details: streamError.message,
                 stack: streamError.stack
             }), { status: 500 })
