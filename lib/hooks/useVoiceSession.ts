@@ -19,7 +19,7 @@ interface UseVoiceSessionReturn {
     clearError: () => void
 }
 
-const SILENCE_TIMEOUT = 800
+const SILENCE_TIMEOUT = 500 // Reduced for faster response, was 800
 const MIN_TRANSCRIPT_LENGTH = 2
 
 export function useVoiceSession(language: string = 'es-AR'): UseVoiceSessionReturn {
@@ -96,9 +96,13 @@ export function useVoiceSession(language: string = 'es-AR'): UseVoiceSessionRetu
 
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
         const recognition = new SpeechRecognition()
-        recognition.continuous = true
+
+        // On mobile, continuous mode causes severe duplication issues
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+        recognition.continuous = !isMobile // false on mobile, true on desktop
         recognition.interimResults = true
         recognition.lang = language
+        console.log('[Voice] SpeechRecognition config - mobile:', isMobile, 'continuous:', recognition.continuous)
 
         recognition.onstart = () => {
             console.log('[Voice] recognition.onstart fired')

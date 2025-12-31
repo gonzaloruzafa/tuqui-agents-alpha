@@ -175,9 +175,11 @@ export async function POST(req: Request) {
                 console.error('[Chat] Error loading tools:', toolsError)
             }
 
-            console.log('[Chat] Calling streamText with model: gemini-2.0-flash')
+            // Use faster model for voice mode to reduce latency
+            const modelName = voiceMode ? 'gemini-1.5-flash' : 'gemini-2.0-flash'
+            console.log('[Chat] Calling streamText with model:', modelName, 'voiceMode:', voiceMode)
             const result = streamText({
-                model: google('gemini-2.0-flash'),
+                model: google(modelName),
                 system: systemSystem,
                 messages: messages.map((m: any) => ({
                     role: m.role as 'user' | 'assistant' | 'system',
