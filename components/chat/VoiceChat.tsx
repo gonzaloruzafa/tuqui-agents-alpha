@@ -73,7 +73,13 @@ export function VoiceChat({ isOpen, onClose, onAddMessage, agentSlug, sessionId,
                 })
             })
 
-            if (!response.ok) throw new Error('API Error')
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}))
+                const errorMsg = `API Error 500: ${errorData.error || 'Unknown'} - ${errorData.details || ''}`
+                console.error('[VoiceChat] API Error:', errorMsg, errorData)
+                setDebugError(errorMsg)
+                throw new Error('API Error')
+            }
 
             const botText = await response.text() // Assume voice mode returns plain text or we handle stream
 

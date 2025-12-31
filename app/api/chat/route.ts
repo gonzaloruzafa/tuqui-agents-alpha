@@ -179,27 +179,52 @@ export async function POST(req: Request) {
             // If voiceMode is ON, we want a simple text response, not a stream
             // to make the client implementation simpler and avoiding parsing SSE
             if (voiceMode) {
-                const { generateText } = await import('ai')
-                const hasActiveTools = Object.keys(tools).length > 0
-
-                const result = await generateText({
-                    model: google('gemini-2.0-flash'),
-                    system: systemSystem,
-                    messages: messages.map((m: any) => ({
-                        role: m.role as 'user' | 'assistant' | 'system',
-                        content: m.content
-                    })),
-                    ...(hasActiveTools ? { tools, maxSteps: 5 } : {})
-                } as any) // Cast to any to bypass strict type check for experimental/new AI SDK versions
-
-                // Track usage
                 try {
-                    await trackUsage(tenantId, session.user.email!, result.usage.totalTokens || 0)
-                } catch (e) {
-                    console.error('[Chat] Failed to track usage:', e)
-                }
+                    const hasActiveTools = Object.keys(tools).length > 0
 
-                return new Response(result.text)
+                    let responseText = ''
+                    let totalTokens = 0
+
+                    if (hasActiveTools) {
+                        const { generateTextNative } = await import('@/lib/tools/native-gemini')
+                        const result = await generateTextNative({
+                            system: systemSystem,
+                            messages,
+                            tools,
+                            maxSteps: 5
+                        })
+                        responseText = result.text
+                        totalTokens = result.usage.totalTokens
+                    } else {
+                        const { generateText } = await import('ai')
+                        const result = await generateText({
+                            model: google('gemini-2.0-flash'),
+                            system: systemSystem,
+                            messages: messages.map((m: any) => ({
+                                role: m.role as 'user' | 'assistant' | 'system',
+                                content: m.content
+                            })),
+                        })
+                        responseText = result.text
+                        totalTokens = result.usage.totalTokens || 0
+                    }
+
+                    // Track usage
+                    try {
+                        await trackUsage(tenantId, session.user.email!, totalTokens)
+                    } catch (e) {
+                        console.error('[Chat] Failed to track usage:', e)
+                    }
+
+                    return new Response(responseText)
+                } catch (voiceError: any) {
+                    console.error('[Chat] VoiceMode generation error:', voiceError)
+                    return new Response(JSON.stringify({
+                        error: 'Voice generation failed',
+                        details: voiceError.message,
+                        stack: voiceError.stack
+                    }), { status: 500 })
+                }
             }
 
             console.log('[Chat] Calling streamText with model: gemini-2.0-flash')
