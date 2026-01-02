@@ -199,75 +199,53 @@ export default function ChatPage() {
     const [sessions, setSessions] = useState<Session[]>([])
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionIdParam)
     const [isRecording, setIsRecording] = useState(false)
+    const [recognition, setRecognition] = useState<any>(null)
     const [lastTranscript, setLastTranscript] = useState('')
     const [isVoiceOpen, setIsVoiceOpen] = useState(false)
     const transcriptRef = useRef('')
 
-    // Speech Recognition - created on demand, not on mount
-    const recognitionRef = useRef<any>(null)
+    // Setup Speech Recognition - exactly as it was when it worked
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+            if (SpeechRecognition) {
+                const rec = new SpeechRecognition()
+                rec.lang = 'es-AR'
+                rec.continuous = true
+                rec.interimResults = true
 
-    const getOrCreateRecognition = () => {
-        if (recognitionRef.current) return recognitionRef.current
-        
-        if (typeof window === 'undefined') return null
-        
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-        if (!SpeechRecognition) return null
-        
-        const rec = new SpeechRecognition()
-        rec.lang = 'es-AR'
-        rec.continuous = true
-        rec.interimResults = true
+                rec.onresult = (event: any) => {
+                    let totalTranscript = ''
+                    for (let i = 0; i < event.results.length; ++i) {
+                        totalTranscript += event.results[i][0].transcript
+                    }
+                    setLastTranscript(totalTranscript)
+                    transcriptRef.current = totalTranscript
+                }
 
-        rec.onresult = (event: any) => {
-            let totalTranscript = ''
-            for (let i = 0; i < event.results.length; ++i) {
-                totalTranscript += event.results[i][0].transcript
+                rec.onerror = (event: any) => {
+                    console.error('Speech recognition error:', event.error)
+                    setIsRecording(false)
+                }
+
+                rec.onend = () => {
+                    // Do not auto-close unless error
+                }
+
+                setRecognition(rec)
             }
-            setLastTranscript(totalTranscript)
-            transcriptRef.current = totalTranscript
         }
-
-        rec.onerror = (event: any) => {
-            console.error('Speech recognition error:', event.error)
-            if (event.error !== 'no-speech' && event.error !== 'aborted') {
-                setIsRecording(false)
-            }
-        }
-
-        rec.onend = () => {
-            // Don't auto-restart
-        }
-
-        recognitionRef.current = rec
-        return rec
-    }
-
-    // Check if speech recognition is supported
-    const isSpeechSupported = typeof window !== 'undefined' && 
-        ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
+    }, [])
 
     const startRecording = () => {
-        const recognition = getOrCreateRecognition()
-        if (!recognition) {
-            console.error('[Recording] Speech recognition not supported')
-            return
-        }
+        if (!recognition) return
         setLastTranscript('')
         transcriptRef.current = ''
-        
-        try {
-            console.log('[Recording] Starting recognition...')
-            recognition.start()
-            setIsRecording(true)
-            console.log('[Recording] Started successfully')
-        } catch (err: any) {
-            console.error('[Recording] Start failed:', err?.name, err?.message)
-        }
+        recognition.start()
+        setIsRecording(true)
     }
 
     const cancelRecording = () => {
-        const recognition = recognitionRef.current
         if (!recognition) return
         recognition.stop()
         setLastTranscript('')
@@ -276,7 +254,6 @@ export default function ChatPage() {
     }
 
     const confirmRecording = () => {
-        const recognition = recognitionRef.current
         if (!recognition) return
         recognition.stop()
 
@@ -700,7 +677,7 @@ export default function ChatPage() {
                                     rows={1}
                                 />
                                 <div className="flex items-center gap-1 pb-1">
-                                    {isSpeechSupported && (
+                                    {recognition && (
                                         <button
                                             onClick={startRecording}
                                             className="p-2 text-gray-400 hover:text-adhoc-violet hover:bg-adhoc-lavender/20 rounded-full transition-all"
