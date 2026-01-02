@@ -7,6 +7,8 @@ export async function getTwilioClientForTenant(tenantId: string) {
     const globalSid = process.env.TWILIO_ACCOUNT_SID
     const globalToken = process.env.TWILIO_AUTH_TOKEN
 
+    console.log(`[Twilio] Global SID present: ${!!globalSid}, Global Token present: ${!!globalToken}`)
+
     if (globalSid && globalToken) {
         return twilio(globalSid, globalToken)
     }
