@@ -55,6 +55,7 @@ async function ensureTuquiUnified(tenantId: string): Promise<void> {
     const { data: newAgent, error } = await db
         .from('agents')
         .insert({
+            tenant_id: tenantId,
             slug: TUQUI_UNIFIED.slug,
             name: TUQUI_UNIFIED.name,
             description: TUQUI_UNIFIED.description,
@@ -76,6 +77,7 @@ async function ensureTuquiUnified(tenantId: string): Promise<void> {
 
     // Insert tools for Tuqui
     const toolsToInsert = TUQUI_UNIFIED.tools.map(toolSlug => ({
+        tenant_id: tenantId,
         agent_id: newAgent.id,
         tool_slug: toolSlug,
         enabled: true

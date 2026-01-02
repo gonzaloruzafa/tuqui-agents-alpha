@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       // Insert new subscription
       const result = await supabase
         .from('push_subscriptions')
-        .insert({ user_email: session.user.email, subscription })
+        .insert({ tenant_id: tenantId, user_email: session.user.email, subscription })
         .select()
         .single();
       data = result.data;

@@ -26,6 +26,7 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 
 export interface NotifyOptions {
     db: SupabaseClient
+    tenantId: string
     recipients: string[]
     notificationType: NotificationType
     payload: NotificationPayload
@@ -43,7 +44,7 @@ export interface NotifyResult {
  * Send notifications to all recipients through configured channels
  */
 export async function sendNotifications(options: NotifyOptions): Promise<NotifyResult> {
-    const { db, recipients, notificationType, payload, taskId } = options
+    const { db, tenantId, recipients, notificationType, payload, taskId } = options
     
     console.log(`[Notifier] Starting with: type=${notificationType}, recipients=${JSON.stringify(recipients)}`)
     
@@ -64,7 +65,7 @@ export async function sendNotifications(options: NotifyOptions): Promise<NotifyR
         // 1. In-App Notification (always saved for record, optionally marked)
         if (shouldSendInApp || shouldSendPush || shouldSendEmail) {
             try {
-                await saveInAppNotification(db, recipientEmail, payload, taskId)
+                await saveInAppNotification(db, tenantId, recipientEmail, payload, taskId)
                 console.log(`[Notifier] Saved in-app notification for: ${recipientEmail}`)
                 result.inAppSent++
             } catch (e) {
@@ -108,11 +109,13 @@ export async function sendNotifications(options: NotifyOptions): Promise<NotifyR
  */
 async function saveInAppNotification(
     db: SupabaseClient,
+    tenantId: string,
     userEmail: string,
     payload: NotificationPayload,
     taskId?: string
 ): Promise<void> {
     const { error } = await db.from('notifications').insert({
+        tenant_id: tenantId,
         user_email: userEmail,
         agent_id: payload.agentId,
         task_id: taskId,

@@ -62,6 +62,7 @@ export interface Notification {
 // ============================================================
 export interface PrometeoExecution {
     id: string
+    tenant_id: string
     task_id: string
     executed_at: string
     condition_met?: boolean | null  // null for scheduled, true/false for conditional

@@ -113,9 +113,11 @@ export async function uploadDocument(formData: FormData) {
     console.log(`[RAG] Content extracted: ${content.length} chars`)
 
     const db = await getTenantClient(session.tenant.id)
+    const tenantId = session.tenant.id
 
     // 2. Insert document (no agent_id = available to all agents)
     const { data: doc, error: docError } = await db.from('documents').insert({
+        tenant_id: tenantId,
         title: file.name,
         content: content,
         source_type: 'upload',
@@ -156,6 +158,7 @@ export async function uploadDocument(formData: FormData) {
 
         // 5. Insert chunks with embeddings
         const chunksToInsert = chunks.map((chunk, i) => ({
+            tenant_id: tenantId,
             document_id: doc.id,
             content: chunk.content,
             embedding: embeddings[i],

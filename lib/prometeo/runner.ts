@@ -85,6 +85,7 @@ async function executeTask(tenantId: string, task: PrometeoTask) {
     const db = await getTenantClient(tenantId)
 
     const execution: Partial<PrometeoExecution> = {
+        tenant_id: tenantId,
         task_id: task.id,
         executed_at: new Date().toISOString(),
         status: 'success',
@@ -168,6 +169,7 @@ Genera una notificación concisa (máximo 200 caracteres) con la información so
             
             const result = await sendNotifications({
                 db,
+                tenantId,
                 recipients: task.recipients,
                 notificationType: (task.notification_type || 'in_app') as NotificationType,
                 payload,

@@ -24,6 +24,7 @@ export async function getOrCreateWhatsAppSession(tenantId: string, agentId: stri
     const { data: newSession, error: createError } = await db
         .from('chat_sessions')
         .insert({
+            tenant_id: tenantId,
             agent_id: agentId,
             user_email: userEmail,
             title: 'WhatsApp Conversation'
@@ -94,6 +95,7 @@ export async function saveMessage(tenantId: string, sessionId: string, role: 'us
     const { error: msgError } = await db
         .from('chat_messages')
         .insert({
+            tenant_id: tenantId,
             session_id: sessionId,
             role,
             content

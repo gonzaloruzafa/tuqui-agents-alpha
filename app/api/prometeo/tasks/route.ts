@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('prometeo_tasks')
       .insert({
+        tenant_id: session.tenant.id,
         agent_id,
         user_email: session.user.email, // Required NOT NULL field
         name: body.name || '', // Optional name

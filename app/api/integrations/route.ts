@@ -31,7 +31,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Missing slug' }, { status: 400 })
     }
 
-    const db = await getTenantClient(session.tenant.id)
+    const tenantId = session.tenant.id
+    const db = await getTenantClient(tenantId)
 
     // Check if integration exists
     const { data: existing } = await db
@@ -68,6 +69,7 @@ export async function POST(req: Request) {
         const { error } = await db
             .from('integrations')
             .insert({ 
+                tenant_id: tenantId,
                 slug, 
                 type: slug, 
                 is_active: is_active || false, 

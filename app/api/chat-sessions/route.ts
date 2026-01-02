@@ -53,6 +53,7 @@ export async function POST(req: Request) {
         const { data, error } = await db
             .from('chat_sessions')
             .insert({
+                tenant_id: session.tenant.id,
                 agent_id: agentId,
                 user_email: session.user.email,
                 title: title || 'Nuevo Chat'
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
         const { data, error } = await db
             .from('chat_messages')
             .insert({
+                tenant_id: session.tenant.id,
                 session_id: sessionId,
                 role,
                 content,
