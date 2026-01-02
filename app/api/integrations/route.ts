@@ -25,10 +25,10 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { slug, is_active, config } = body
+    const { type, is_active, config } = body
 
-    if (!slug) {
-        return NextResponse.json({ error: 'Missing slug' }, { status: 400 })
+    if (!type) {
+        return NextResponse.json({ error: 'Missing type' }, { status: 400 })
     }
 
     const tenantId = session.tenant.id
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const { data: existing } = await db
         .from('integrations')
         .select('id, config')
-        .eq('slug', slug)
+        .eq('type', type)
         .single()
 
     if (existing) {
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
                 is_active, 
                 config: mergedConfig
             })
-            .eq('slug', slug)
+            .eq('type', type)
 
         if (error) {
             console.error('Update error:', error)
@@ -70,8 +70,7 @@ export async function POST(req: Request) {
             .from('integrations')
             .insert({ 
                 tenant_id: tenantId,
-                slug, 
-                type: slug, 
+                type, 
                 is_active: is_active || false, 
                 config: config || {} 
             })

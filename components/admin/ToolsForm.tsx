@@ -86,7 +86,7 @@ export function ToolForm({ tool, initialConfig, initialActive }: ToolFormProps) 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    slug: tool.slug,
+                    type: tool.slug,
                     is_active: isActive,
                     config: config
                 })
@@ -202,11 +202,11 @@ export function ToolForm({ tool, initialConfig, initialActive }: ToolFormProps) 
 }
 
 interface ToolsListProps {
-    integrations: Array<{ slug: string; is_active: boolean; config: Record<string, string> }>
+    integrations: Array<{ type: string; is_active: boolean; config: Record<string, string> }>
 }
 
 export function ToolsList({ integrations }: ToolsListProps) {
-    const integrationsMap = new Map(integrations.map(i => [i.slug, i]))
+    const integrationsMap = new Map(integrations.map(i => [i.type, i]))
 
     return (
         <div className="grid gap-6">
