@@ -11,6 +11,12 @@ export async function POST(req: NextRequest) {
 
     try {
         const rawBody = await req.text()
+        const headers = Object.fromEntries(req.headers.entries())
+        console.log('[WhatsApp] Webhook request:', {
+            headers,
+            body: rawBody
+        })
+
         const params = new URLSearchParams(rawBody)
 
         // 0. Handle Twilio Debugger
@@ -27,7 +33,7 @@ export async function POST(req: NextRequest) {
 
         if (!from || !body) {
             console.log('[WhatsApp] Invalid messaging payload. Received keys:', Array.from(params.keys()).join(', '))
-            return new Response('Invalid payload', { status: 400 })
+            return new Response(`Invalid payload. Received keys: ${Array.from(params.keys()).join(', ')}`, { status: 400 })
         }
 
         console.log(`[WhatsApp] Incoming from ${from}: ${body}`)
