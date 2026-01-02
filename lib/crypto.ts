@@ -14,6 +14,7 @@ export function encrypt(text: string): string {
 }
 
 export function decrypt(text: string): string {
+    if (!text || typeof text !== 'string') return ''
     if (!text.startsWith('enc:')) return text
     return Buffer.from(text.slice(4), 'base64').toString('utf-8')
 }

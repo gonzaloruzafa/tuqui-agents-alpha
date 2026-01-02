@@ -477,15 +477,15 @@ ${systemPrompt}`
             functionCallingConfig: {
                 mode: 'AUTO' as any
             }
-        }
-    })
-
-    const chat = model.startChat({
-        history,
+        },
         systemInstruction: {
             role: 'user',
             parts: [{ text: executorPrompt }]
         }
+    })
+
+    const chat = model.startChat({
+        history
     })
 
     const enhancedMessage = `Consulta del usuario: "${userMessage}"

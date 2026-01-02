@@ -57,6 +57,37 @@ export async function getSessionMessages(tenantId: string, sessionId: string, li
     return messages as Message[]
 }
 
+/**
+ * Get recent messages across all agents for a user (for context-aware routing)
+ * This is useful for WhatsApp where we need to maintain context across agent switches
+ */
+export async function getRecentUserMessages(tenantId: string, userEmail: string, limit = 10): Promise<Message[]> {
+    const db = await getTenantClient(tenantId)
+    
+    // Get recent messages from all sessions for this user
+    const { data: messages, error } = await db
+        .from('chat_messages')
+        .select(`
+            role,
+            content,
+            chat_sessions!inner(user_email)
+        `)
+        .eq('chat_sessions.user_email', userEmail)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+    if (error) {
+        console.error('[ChatHistory] Error fetching recent messages:', error)
+        return []
+    }
+
+    // Return in chronological order
+    return (messages as any[])?.reverse().map(m => ({
+        role: m.role,
+        content: m.content
+    })) || []
+}
+
 export async function saveMessage(tenantId: string, sessionId: string, role: 'user' | 'assistant', content: string) {
     const db = await getTenantClient(tenantId)
 

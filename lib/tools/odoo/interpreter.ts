@@ -52,25 +52,41 @@ Si el usuario pregunta "pero esos son de X?", quiere REPETIR la consulta anterio
 
 ### 4. DESGLOSES Y PROFUNDIZACIÓN
 - "pero qué productos?" (tras ventas de Martin) → MANTENER user_id: 'Martin' + period: '2025' + model: 'sale.order.line' + groupBy: ['product_id'].
+- "el segundo?" o "cuanto?" después de un ranking → EXTRAER la entidad del segundo puesto del historial y consultar por ella.
 
-### 5. MODELOS SEGÚN CONTEXTO:
+### 5. REFERENCIAS IMPLÍCITAS (CRÍTICO)
+Cuando el usuario dice:
+- "qué vendió martin?" después de un ranking → model: 'sale.order.line' + filters: 'user_id: Martin [apellido del historial]'
+- "cuánto compramos?" después de hablar de compras → model: 'purchase.order', mantener período
+- "desglosame eso" → repetir última consulta pero con más detalle (más groupBy o search en vez de aggregate)
+- "compara con el mes anterior" → agregar compare: 'mom' a la consulta previa
+
+### 6. MODELOS SEGÚN CONTEXTO:
 - "ventas" / "vendedores" / "quién vendió" → sale.order
 - "compras" / "proveedores" / "qué compramos" → purchase.order
-- "productos" / "qué se vendió" → sale.order.line (Suele usarse para detalles de ventas)
+- "productos vendidos" / "qué se vendió" / "qué vendió [nombre]" → sale.order.line (para detalle de líneas)
 - "facturas" → account.move
 - "stock" → stock.quant
+
+### 7. EVITAR CLARIFICACIONES INNECESARIAS
+NUNCA pidas clarificación si:
+- El modelo/operación se puede inferir del contexto
+- El período ya fue definido previamente
+- La entidad (vendedor, cliente) fue mencionada antes
 
 **OUTPUT ESPERADO:**
 Responde SOLO con el JSON:
 { 
   "intent": "aggregate" | "search" | "count" | "discover" | "clarify",
-  "description": "Descripción",
+  "description": "Descripción breve de la consulta",
   "model": "model.name",
   "period": "periodo detectado/persistido",
-  "filters": "filtros (ej: 'user_id: Martin Travella')",
+  "filters": "filtros (ej: 'user_id: Martin Travella, state: sale')",
   "groupBy": ["campo"],
-  "metric": "campo:operacion",
-  "contextFromHistory": "Por qué se tomó esta decisión"
+  "metric": "campo:operacion (ej: price_total:sum)",
+  "limit": 10,
+  "orderBy": "campo desc",
+  "contextFromHistory": "Explicación de por qué se tomó esta decisión"
 }
 
 La fecha actual es ${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}.
@@ -94,21 +110,22 @@ export async function interpretQuery(
         }
     })
 
-    // Construir contexto del historial
+    // Construir contexto del historial - ser más generoso con el contexto
     let historyContext = ''
     if (history.length > 0) {
-        const recentHistory = history.slice(-10) // Últimos 10 mensajes
-        historyContext = '\n\n**HISTORIAL DE CONVERSACIÓN:**\n'
+        const recentHistory = history.slice(-15) // Últimos 15 mensajes para mejor contexto
+        historyContext = '\n\n**HISTORIAL DE CONVERSACIÓN (Analiza para mantener contexto):**\n'
         for (const msg of recentHistory) {
             const role = msg.role === 'model' ? 'Asistente' : 'Usuario'
             const text = msg.parts.map((p: any) => p.text || '').join('')
             if (text) {
-                historyContext += `${role}: ${text.substring(0, 500)}\n`
+                // Incluir más contenido para capturar nombres, números, etc.
+                historyContext += `${role}: ${text.substring(0, 800)}\n`
             }
         }
     }
 
-    const prompt = `${INTERPRETER_PROMPT}${historyContext}\n\n**MENSAJE ACTUAL DEL USUARIO:**\n${userMessage}`
+    const prompt = `${INTERPRETER_PROMPT}${historyContext}\n\n**MENSAJE ACTUAL DEL USUARIO:**\n${userMessage}\n\nRecuerda: Si hay entidades (nombres, períodos, productos) en el historial que el usuario está referenciando implícitamente, USARLAS. NO pedir clarificación si la info está en el historial.`
 
     try {
         const result = await model.generateContent(prompt)
