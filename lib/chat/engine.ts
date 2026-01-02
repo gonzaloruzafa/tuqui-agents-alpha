@@ -6,6 +6,7 @@ import { chatWithOdoo } from '@/lib/tools/gemini-odoo'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 import { Agent } from '@/lib/agents/service'
+import { routeMessage, buildCombinedPrompt } from '@/lib/agents/router'
 
 const google = createGoogleGenerativeAI({
     apiKey: process.env.GEMINI_API_KEY
@@ -64,8 +65,31 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
         const estimatedInputTokens = Math.ceil(inputContent.length / 3)
         await checkUsageLimit(tenantId, userEmail, estimatedInputTokens)
 
-        // 2. Build System Prompt & Context
+        // 2. Route to best sub-agent based on message content
+        const conversationHistory = messages.slice(0, -1).map(m => m.content)
+        const routingResult = await routeMessage(tenantId, inputContent, conversationHistory)
+        
+        console.log(`[ChatEngine] Routing: ${routingResult.selectedAgent?.slug || 'none'} (${routingResult.confidence}) - ${routingResult.reason}`)
+
+        // Use sub-agent config if found, otherwise use main agent
+        const effectiveAgent = routingResult.selectedAgent ? {
+            ...agent,
+            tools: routingResult.selectedAgent.tools.length > 0 ? routingResult.selectedAgent.tools : agent.tools,
+            rag_enabled: routingResult.selectedAgent.rag_enabled || agent.rag_enabled
+        } : agent
+
+        // 3. Build System Prompt & Context
         let systemPrompt = agent.system_prompt || 'Sos un asistente útil.'
+        
+        // Combine with sub-agent prompt if different specialty
+        if (routingResult.selectedAgent && routingResult.selectedAgent.system_prompt && routingResult.confidence !== 'low') {
+            systemPrompt = buildCombinedPrompt(
+                systemPrompt,
+                routingResult.selectedAgent.system_prompt,
+                routingResult.selectedAgent.name
+            )
+        }
+
         const companyContext = await getCompanyContext(tenantId)
 
         if (companyContext) {
@@ -79,10 +103,12 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
             systemPrompt += '\n\nREGLA PARA WHATSAPP: Sé conciso pero útil. Usa formato Markdown simple (negritas, listas). No uses lenguaje excesivamente formal excepto que sea necesario.'
         }
 
-        // 3. RAG Context
-        if (agent.rag_enabled) {
+        // 4. RAG Context (using effective agent config)
+        if (effectiveAgent.rag_enabled) {
             try {
-                const docs = await searchDocuments(tenantId, agent.id, inputContent)
+                // Search in main agent docs + sub-agent docs if different
+                const agentId = routingResult.selectedAgent?.id || agent.id
+                const docs = await searchDocuments(tenantId, agentId, inputContent)
                 if (docs.length > 0) {
                     systemPrompt += `\n\nCONTEXTO RELEVANTE:\n${docs.map(d => `- ${d.content}`).join('\n')}`
                 }
@@ -91,8 +117,8 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
             }
         }
 
-        // 4. Execution Path
-        const hasOdooTools = agent.tools?.some((t: string) => t.startsWith('odoo'))
+        // 5. Execution Path (using effective agent tools)
+        const hasOdooTools = effectiveAgent.tools?.some((t: string) => t.startsWith('odoo'))
         let responseText = ''
         let totalTokens = 0
 
@@ -129,7 +155,7 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
         } else {
             // Path B: Standard Agent (AI SDK)
             console.log('[ChatEngine] Using Standard Agent path')
-            const tools = await getToolsForAgent(tenantId, agent.tools || [])
+            const tools = await getToolsForAgent(tenantId, effectiveAgent.tools || [])
 
             const result = await generateText({
                 model: google('gemini-2.0-flash'),
@@ -143,7 +169,7 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
             totalTokens = result.usage.totalTokens || 0
         }
 
-        // 5. Track Usage
+        // 6. Track Usage
         try {
             await trackUsage(tenantId, userEmail, Math.ceil(totalTokens))
         } catch (e) {
