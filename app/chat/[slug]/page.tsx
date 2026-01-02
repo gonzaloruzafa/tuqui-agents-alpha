@@ -135,6 +135,13 @@ const AudioVisualizer = ({ isRecording }: { isRecording: boolean }) => {
     )
 }
 
+interface TuquiCapability {
+    icon: string
+    title: string
+    description: string
+    examples: string[]
+}
+
 interface Agent {
     id: string
     name: string
@@ -146,6 +153,7 @@ interface Agent {
     description?: string
     tools: string[]
     rag_enabled: boolean
+    capabilities?: TuquiCapability[]
 }
 
 interface Message {
@@ -601,9 +609,34 @@ export default function ChatPage() {
                                 <h1 className="text-2xl font-display font-bold text-gray-900 mb-3 leading-tight tracking-tight">
                                     {agent.welcome_message}
                                 </h1>
-                                <p className="text-gray-500 max-w-sm mx-auto text-sm leading-relaxed">
+                                <p className="text-gray-500 max-w-sm mx-auto text-sm leading-relaxed mb-8">
                                     {agent.description || 'Consultame lo que necesites, estoy para ayudarte.'}
                                 </p>
+                                
+                                {/* Capabilities Grid */}
+                                {agent.capabilities && agent.capabilities.length > 0 && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
+                                        {agent.capabilities.map((cap, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => cap.examples[0] && setInput(cap.examples[0])}
+                                                className="text-left p-4 bg-white border border-gray-200 rounded-xl hover:border-adhoc-violet hover:shadow-md transition-all group"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <span className="text-2xl">{cap.icon}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="font-medium text-gray-900 group-hover:text-adhoc-violet transition-colors">
+                                                            {cap.title}
+                                                        </h3>
+                                                        <p className="text-xs text-gray-500 mt-1">
+                                                            {cap.description}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 

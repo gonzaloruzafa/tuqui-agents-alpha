@@ -1,5 +1,5 @@
 import { getTenantClient } from '../supabase/tenant'
-import { BUILTIN_AGENTS } from './registry'
+import { TUQUI_UNIFIED, type TuquiCapability } from './unified'
 
 export interface Agent {
     id: string
@@ -15,6 +15,7 @@ export interface Agent {
     placeholder_text: string | null
     features?: string[]
     tools?: string[]
+    capabilities?: TuquiCapability[]
 }
 
 /**
@@ -31,130 +32,98 @@ async function getAgentTools(db: any, agentId: string): Promise<string[]> {
 }
 
 /**
- * Ensure built-in agents exist in DB (auto-seed on first access)
+ * Ensure Tuqui Unified agent exists in DB
  */
-async function ensureBuiltinAgents(tenantId: string): Promise<void> {
+async function ensureTuquiUnified(tenantId: string): Promise<void> {
     const db = await getTenantClient(tenantId)
 
-    // Check if agents exist
-    const { data: existingAgents } = await db
+    // Check if tuqui exists
+    const { data: existingAgent } = await db
         .from('agents')
-        .select('slug')
+        .select('id, slug')
+        .eq('slug', 'tuqui')
+        .single()
 
-    const existingSlugs = new Set(existingAgents?.map(a => a.slug) || [])
+    if (existingAgent) {
+        console.log('[Agents] Tuqui Unified already exists')
+        return
+    }
 
-    // Insert missing built-in agents
-    const missingAgents = Object.entries(BUILTIN_AGENTS)
-        .filter(([slug]) => !existingSlugs.has(slug))
-        .map(([slug, config]) => ({
-            slug,
-            name: config.name,
-            description: config.description,
-            icon: config.icon,
-            color: 'adhoc-violet',
+    console.log(`[Agents] Creating Tuqui Unified for tenant ${tenantId}`)
+    
+    // Insert Tuqui Unified
+    const { data: newAgent, error } = await db
+        .from('agents')
+        .insert({
+            slug: TUQUI_UNIFIED.slug,
+            name: TUQUI_UNIFIED.name,
+            description: TUQUI_UNIFIED.description,
+            icon: TUQUI_UNIFIED.icon,
+            color: TUQUI_UNIFIED.color,
             is_active: true,
-            rag_enabled: config.ragEnabled,
-            system_prompt: config.systemPrompt,
-            welcome_message: `Hola, soy ${config.name}. ¿En qué puedo ayudarte?`,
-            placeholder_text: 'Escribí tu consulta...'
-        }))
+            rag_enabled: TUQUI_UNIFIED.ragEnabled,
+            system_prompt: TUQUI_UNIFIED.systemPrompt,
+            welcome_message: TUQUI_UNIFIED.welcomeMessage,
+            placeholder_text: TUQUI_UNIFIED.placeholderText
+        })
+        .select('id')
+        .single()
 
-    if (missingAgents.length > 0) {
-        console.log(`[Agents] Auto-seeding ${missingAgents.length} built-in agents for tenant ${tenantId}`)
-        const { data: insertedAgents, error } = await db
-            .from('agents')
-            .insert(missingAgents)
-            .select('id, slug')
-
-        if (error) {
-            console.error('[Agents] Error seeding agents:', error)
-            return
-        }
-
-        // Insert agent_tools for the seeded agents
-        if (insertedAgents && insertedAgents.length > 0) {
-            const toolsToInsert: { agent_id: string; tool_slug: string; enabled: boolean }[] = []
-
-            for (const agent of insertedAgents) {
-                const config = BUILTIN_AGENTS[agent.slug as keyof typeof BUILTIN_AGENTS]
-                if (config?.tools && config.tools.length > 0) {
-                    for (const toolSlug of config.tools) {
-                        toolsToInsert.push({
-                            agent_id: agent.id,
-                            tool_slug: toolSlug,
-                            enabled: true
-                        })
-                    }
-                }
-            }
-
-            if (toolsToInsert.length > 0) {
-                await db.from('agent_tools').insert(toolsToInsert)
-            }
-        }
-    }
-}
-
-export async function getAgentsForTenant(tenantId: string): Promise<Agent[]> {
-    const db = await getTenantClient(tenantId)
-
-    // Ensure built-in agents are seeded
-    await ensureBuiltinAgents(tenantId)
-
-    // Get all active agents from DB
-    const { data: dbAgents, error } = await db
-        .from('agents')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
-
-    if (error) {
-        console.error('[Agents] Error fetching agents:', error)
-        throw error
+    if (error || !newAgent) {
+        console.error('[Agents] Error creating Tuqui Unified:', error)
+        return
     }
 
-    // Map DB agents to Agent interface with their tools
-    const agents: Agent[] = await Promise.all((dbAgents || []).map(async (a: any) => {
-        const tools = await getAgentTools(db, a.id)
-        return {
-            id: a.id,
-            slug: a.slug,
-            name: a.name,
-            description: a.description,
-            icon: a.icon || 'Bot',
-            color: a.color || 'adhoc-violet',
-            is_active: a.is_active,
-            rag_enabled: a.rag_enabled || false,
-            system_prompt: a.system_prompt,
-            welcome_message: a.welcome_message,
-            placeholder_text: a.placeholder_text,
-            features: [],
-            tools
-        }
+    // Insert tools for Tuqui
+    const toolsToInsert = TUQUI_UNIFIED.tools.map(toolSlug => ({
+        agent_id: newAgent.id,
+        tool_slug: toolSlug,
+        enabled: true
     }))
 
-    return agents
+    if (toolsToInsert.length > 0) {
+        await db.from('agent_tools').insert(toolsToInsert)
+        console.log(`[Agents] Added ${toolsToInsert.length} tools to Tuqui`)
+    }
 }
 
-export async function getAgentBySlug(tenantId: string, slug: string): Promise<Agent | null> {
+/**
+ * Get Tuqui Unified agent (the only agent)
+ */
+export async function getTuqui(tenantId: string): Promise<Agent> {
     const db = await getTenantClient(tenantId)
 
-    // Ensure built-in agents are seeded
-    await ensureBuiltinAgents(tenantId)
+    // Ensure Tuqui exists
+    await ensureTuquiUnified(tenantId)
 
-    // Get specific agent
+    // Get Tuqui from DB
     const { data: agent, error } = await db
         .from('agents')
         .select('*')
-        .eq('slug', slug)
+        .eq('slug', 'tuqui')
         .single()
 
     if (error || !agent) {
-        console.error(`[Agents] Agent ${slug} not found`)
-        return null
+        console.error('[Agents] Tuqui not found after ensure:', error)
+        // Return default from config
+        return {
+            id: 'default-tuqui',
+            slug: TUQUI_UNIFIED.slug,
+            name: TUQUI_UNIFIED.name,
+            description: TUQUI_UNIFIED.description,
+            icon: TUQUI_UNIFIED.icon,
+            color: TUQUI_UNIFIED.color,
+            is_active: true,
+            rag_enabled: TUQUI_UNIFIED.ragEnabled,
+            system_prompt: TUQUI_UNIFIED.systemPrompt,
+            welcome_message: TUQUI_UNIFIED.welcomeMessage,
+            placeholder_text: TUQUI_UNIFIED.placeholderText,
+            tools: TUQUI_UNIFIED.tools,
+            capabilities: TUQUI_UNIFIED.capabilities
+        }
     }
 
-    // Get tools for this agent
+    // Get tools
     const tools = await getAgentTools(db, agent.id)
 
     return {
@@ -162,14 +131,55 @@ export async function getAgentBySlug(tenantId: string, slug: string): Promise<Ag
         slug: agent.slug,
         name: agent.name,
         description: agent.description,
-        icon: agent.icon || 'Bot',
-        color: agent.color || 'adhoc-violet',
+        icon: agent.icon || TUQUI_UNIFIED.icon,
+        color: agent.color || TUQUI_UNIFIED.color,
         is_active: agent.is_active,
-        rag_enabled: agent.rag_enabled || false,
-        system_prompt: agent.system_prompt,
-        welcome_message: agent.welcome_message,
-        placeholder_text: agent.placeholder_text,
-        features: [],
-        tools
+        rag_enabled: agent.rag_enabled ?? TUQUI_UNIFIED.ragEnabled,
+        system_prompt: agent.system_prompt || TUQUI_UNIFIED.systemPrompt,
+        welcome_message: agent.welcome_message || TUQUI_UNIFIED.welcomeMessage,
+        placeholder_text: agent.placeholder_text || TUQUI_UNIFIED.placeholderText,
+        tools: tools.length > 0 ? tools : TUQUI_UNIFIED.tools,
+        capabilities: TUQUI_UNIFIED.capabilities
     }
+}
+
+/**
+ * Get all agents for tenant - now returns only Tuqui
+ * @deprecated Use getTuqui() instead
+ */
+export async function getAgentsForTenant(tenantId: string): Promise<Agent[]> {
+    const tuqui = await getTuqui(tenantId)
+    return [tuqui]
+}
+
+/**
+ * Get agent by slug - now always returns Tuqui
+ * @deprecated Use getTuqui() instead
+ */
+export async function getAgentBySlug(tenantId: string, slug: string): Promise<Agent | null> {
+    // Always return Tuqui regardless of slug
+    return getTuqui(tenantId)
+}
+
+/**
+ * Update Tuqui configuration (for admin panel)
+ */
+export async function updateTuquiConfig(tenantId: string, updates: {
+    system_prompt?: string
+    welcome_message?: string
+    placeholder_text?: string
+}): Promise<boolean> {
+    const db = await getTenantClient(tenantId)
+    
+    const { error } = await db
+        .from('agents')
+        .update(updates)
+        .eq('slug', 'tuqui')
+
+    if (error) {
+        console.error('[Agents] Error updating Tuqui:', error)
+        return false
+    }
+
+    return true
 }
