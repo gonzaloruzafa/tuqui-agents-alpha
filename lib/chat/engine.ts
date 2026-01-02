@@ -106,7 +106,23 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
                 parts: [{ text: m.content }]
             })) as any[]
 
+            console.log('[ChatEngine] Odoo Path - System Prompt:', systemPrompt.substring(0, 200) + '...')
+            console.log('[ChatEngine] Odoo Path - User Message:', inputContent)
+            console.log('[ChatEngine] Odoo Path - History Count:', history.length)
+
             const odooRes = await chatWithOdoo(tenantId, systemPrompt, inputContent, history)
+
+            console.log('[ChatEngine] Odoo Response:', JSON.stringify({
+                text: odooRes.text.substring(0, 100) + '...',
+                toolCalls: odooRes.toolCalls?.map(tc => tc.name),
+                toolResults: odooRes.toolResults?.map(tr => ({
+                    success: tr.success,
+                    error: tr.error,
+                    count: tr.count,
+                    model: (tr.data as any)?.[0]?.['_model'] // Just in case
+                }))
+            }, null, 2))
+
             responseText = odooRes.text
             // Odoo BI Agent doesn't expose usage yet, using estimate for now
             totalTokens = responseText.length / 3
