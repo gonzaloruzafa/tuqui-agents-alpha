@@ -237,12 +237,23 @@ export default function ChatPage() {
         }
     }, [])
 
-    const startRecording = () => {
+    const startRecording = async () => {
         if (!recognition) return
         setLastTranscript('')
         transcriptRef.current = ''
-        recognition.start()
-        setIsRecording(true)
+        
+        // Request mic permission first (required for mobile and some desktop browsers)
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            // Stop the stream immediately - we just need the permission
+            stream.getTracks().forEach(track => track.stop())
+            
+            recognition.start()
+            setIsRecording(true)
+        } catch (err) {
+            console.error('Mic permission denied:', err)
+            // Optionally show error to user
+        }
     }
 
     const cancelRecording = () => {
@@ -539,12 +550,13 @@ export default function ChatPage() {
                             // Only close sidebar on mobile
                             if (window.innerWidth < 768) setSidebarOpen(false)
                         }}
-                        className="w-full text-left px-3 py-2.5 text-sm bg-white border border-gray-200 hover:border-adhoc-violet hover:text-adhoc-violet rounded-lg shadow-sm flex gap-2 items-center transition-all group"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-lg flex gap-2.5 items-center transition-all group"
                     >
-                        <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-adhoc-violet/10">
-                            <Bot className="w-3 h-3 text-gray-500 group-hover:text-adhoc-violet" />
-                        </div>
-                        <span className="font-medium text-gray-700 group-hover:text-adhoc-violet">Nuevo Chat</span>
+                        <svg className="w-4 h-4 text-gray-500 group-hover:text-adhoc-violet" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
+                        <span className="font-medium text-gray-600 group-hover:text-adhoc-violet">Nuevo chat</span>
                     </button>
                 </div>
 
@@ -580,15 +592,15 @@ export default function ChatPage() {
             <div className="flex-1 flex flex-col min-w-0 h-full relative">
                 <header className="h-14 border-b border-adhoc-lavender/30 flex items-center px-4 justify-between bg-white z-10 shrink-0">
                     <div className="flex items-center gap-3">
-                        {/* Mobile: show menu button when sidebar closed */}
+                        {/* Toggle sidebar */}
                         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-adhoc-lavender/20 rounded-lg text-gray-500 hover:text-adhoc-violet transition-colors">
                             {sidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeft className="w-5 h-5" />}
                         </button>
-                        {/* Logo - visible when sidebar collapsed */}
+                        {/* Logo - always visible when sidebar collapsed */}
                         {!sidebarOpen && (
-                            <img src="/adhoc-logo.png" alt="Adhoc" className="h-7 w-auto hidden md:block" />
+                            <img src="/adhoc-logo.png" alt="Adhoc" className="h-7 w-auto" />
                         )}
-                        <div className="h-6 w-px bg-adhoc-lavender/50 mx-1 hidden md:block"></div>
+                        {!sidebarOpen && <div className="h-6 w-px bg-adhoc-lavender/50 mx-1"></div>}
                         <div className="w-8 h-8 rounded-full bg-adhoc-lavender/30 flex items-center justify-center">
                             {getAgentIcon(agent.icon, 'sm', 'text-adhoc-violet')}
                         </div>

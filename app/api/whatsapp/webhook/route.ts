@@ -77,7 +77,51 @@ export async function POST(req: NextRequest) {
 
         // 5. Save assistant response and send via WhatsApp
         await saveMessage(tenantId, sessionId, 'assistant', result.text)
-        await sendWhatsApp(tenantId, from, result.text)
+        
+        // WhatsApp limit is 1600 chars - split into multiple messages if needed
+        const MAX_WA_LENGTH = 1500 // Leave buffer for special chars
+        const responseText = result.text
+        
+        if (responseText.length <= MAX_WA_LENGTH) {
+            await sendWhatsApp(tenantId, from, responseText)
+        } else {
+            // Split into chunks, trying to break at newlines or sentences
+            const chunks: string[] = []
+            let remaining = responseText
+            
+            while (remaining.length > 0) {
+                if (remaining.length <= MAX_WA_LENGTH) {
+                    chunks.push(remaining)
+                    break
+                }
+                
+                // Find a good break point (newline, period, or space)
+                let breakPoint = remaining.lastIndexOf('\n', MAX_WA_LENGTH)
+                if (breakPoint < MAX_WA_LENGTH * 0.5) {
+                    breakPoint = remaining.lastIndexOf('. ', MAX_WA_LENGTH)
+                }
+                if (breakPoint < MAX_WA_LENGTH * 0.5) {
+                    breakPoint = remaining.lastIndexOf(' ', MAX_WA_LENGTH)
+                }
+                if (breakPoint < MAX_WA_LENGTH * 0.3) {
+                    breakPoint = MAX_WA_LENGTH // Force break
+                }
+                
+                chunks.push(remaining.substring(0, breakPoint + 1).trim())
+                remaining = remaining.substring(breakPoint + 1).trim()
+            }
+            
+            // Send chunks with small delay to maintain order
+            for (let i = 0; i < chunks.length; i++) {
+                const chunkText = chunks.length > 1 
+                    ? `(${i + 1}/${chunks.length}) ${chunks[i]}`
+                    : chunks[i]
+                await sendWhatsApp(tenantId, from, chunkText)
+                if (i < chunks.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500)) // 500ms delay between chunks
+                }
+            }
+        }
 
         // 6. Return empty TwiML to Twilio
         return new Response('<Response></Response>', {
