@@ -610,15 +610,12 @@ export default function ChatPage() {
                     <div className="max-w-3xl mx-auto space-y-6">
                         {messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                                <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-adhoc-lavender/30 flex items-center justify-center shadow-lg shadow-adhoc-lavender/20">
+                                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-adhoc-lavender/30 flex items-center justify-center">
                                     {getAgentIcon(agent.icon, 'lg', 'text-adhoc-violet')}
                                 </div>
-                                <h1 className="text-2xl font-display font-bold text-gray-900 mb-3 leading-tight tracking-tight">
-                                    {agent.welcome_message}
+                                <h1 className="text-xl font-medium text-gray-700">
+                                    ¿En qué puedo ayudarte?
                                 </h1>
-                                <p className="text-gray-500 max-w-md mx-auto text-sm leading-relaxed">
-                                    Puedo ayudarte con datos del ERP, precios de mercado, documentos internos, temas legales y búsquedas web.
-                                </p>
                             </div>
                         )}
 

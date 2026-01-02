@@ -119,7 +119,7 @@ Podés orientar sobre:
 - No pidas aclaraciones innecesarias si la info está en el historial
 `,
 
-    welcomeMessage: '¿En qué puedo ayudarte hoy?',
+    welcomeMessage: '¿En qué puedo ayudarte?',
 
     placeholderText: 'Preguntale lo que quieras a Tuqui...'
 }

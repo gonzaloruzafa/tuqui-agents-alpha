@@ -33,7 +33,7 @@ export default async function AdminSubAgentsPage() {
             <Header />
 
             <AdminSubHeader
-                title="Especialidades de Tuqui"
+                title="Agentes"
                 backHref="/admin"
                 icon={Brain}
                 tenantName={session.tenant?.name}
@@ -45,10 +45,10 @@ export default async function AdminSubAgentsPage() {
                     <div className="flex items-start gap-3">
                         <Sparkles className="w-5 h-5 text-adhoc-violet mt-0.5" />
                         <div>
-                            <h3 className="font-semibold text-gray-900">¿Qué son las especialidades?</h3>
+                            <h3 className="font-semibold text-gray-900">Agentes internos</h3>
                             <p className="text-sm text-gray-600 mt-1">
-                                Son áreas de conocimiento que Tuqui puede usar. Cada especialidad tiene su propio prompt, 
-                                documentos (RAG) y herramientas. Tuqui decide automáticamente cuál usar según la consulta del usuario.
+                                Cada agente tiene su propio prompt, documentos (RAG) y herramientas. 
+                                Tuqui decide automáticamente cuál usar según la consulta del usuario.
                             </p>
                         </div>
                     </div>
@@ -94,8 +94,8 @@ export default async function AdminSubAgentsPage() {
                         <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-4 group-hover:bg-adhoc-violet group-hover:text-white transition-all">
                             <Plus className="w-8 h-8" />
                         </div>
-                        <span className="font-bold text-sm uppercase tracking-widest font-display">Nueva Especialidad</span>
-                        <span className="text-xs mt-2 text-gray-400">Agregar área de conocimiento</span>
+                        <span className="font-bold text-sm uppercase tracking-widest font-display">Nuevo Agente</span>
+                        <span className="text-xs mt-2 text-gray-400">Agregar agente interno</span>
                     </button>
                 </div>
             </div>

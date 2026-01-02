@@ -14,8 +14,8 @@ export default async function AdminPage() {
 
     const cards = [
         {
-            title: 'Especialidades',
-            description: 'Áreas de conocimiento que Tuqui puede usar.',
+            title: 'Agentes',
+            description: 'Configurar agentes y sus capacidades.',
             icon: Brain,
             href: '/admin/agents',
             color: 'text-adhoc-violet',
