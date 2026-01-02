@@ -178,21 +178,12 @@ export default function ChatPage() {
                 rec.interimResults = true
 
                 rec.onresult = (event: any) => {
-                    // Only process final results to avoid duplication
-                    let finalTranscript = ''
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript
-                        }
-                    }
-                    
-                    if (finalTranscript) {
-                        // Append to existing transcript instead of replacing
-                        const newTranscript = (transcriptRef.current + ' ' + finalTranscript).trim()
-                        console.log('[Speech] Final transcript:', newTranscript)
-                        setLastTranscript(newTranscript)
-                        transcriptRef.current = newTranscript
-                    }
+                    // Get the transcript from the last result only
+                    const last = event.results[event.results.length - 1]
+                    const transcript = last[0].transcript
+                    console.log('[Speech] Transcript:', transcript)
+                    setLastTranscript(transcript)
+                    transcriptRef.current = transcript
                 }
 
                 rec.onerror = (event: any) => {
@@ -573,15 +564,12 @@ export default function ChatPage() {
             <div className="flex-1 flex flex-col min-w-0 h-full relative">
                 <header className="h-14 border-b border-adhoc-lavender/30 flex items-center px-4 justify-between bg-white z-10 shrink-0">
                     <div className="flex items-center gap-3">
-                        {/* Toggle sidebar */}
-                        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-adhoc-lavender/20 rounded-lg text-gray-500 hover:text-adhoc-violet transition-colors">
-                            {sidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeft className="w-5 h-5" />}
+                        {/* Toggle sidebar - mobile only */}
+                        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden p-2 hover:bg-adhoc-lavender/20 rounded-lg text-gray-500 hover:text-adhoc-violet transition-colors">
+                            <PanelLeft className="w-5 h-5" />
                         </button>
-                        {/* Logo - always visible when sidebar collapsed */}
-                        {!sidebarOpen && (
-                            <img src="/adhoc-logo.png" alt="Adhoc" className="h-7 w-auto" />
-                        )}
-                        {!sidebarOpen && <div className="h-6 w-px bg-adhoc-lavender/50 mx-1"></div>}
+                        {/* Logo - mobile only when sidebar closed */}
+                        <img src="/adhoc-logo.png" alt="Adhoc" className="h-7 w-auto md:hidden" />
                         <div className="w-8 h-8 rounded-full bg-adhoc-lavender/30 flex items-center justify-center">
                             {getAgentIcon(agent.icon, 'sm', 'text-adhoc-violet')}
                         </div>
@@ -659,13 +647,13 @@ export default function ChatPage() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="relative flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-[24px] focus-within:border-adhoc-violet focus-within:ring-1 focus-within:ring-adhoc-violet/20 focus-within:bg-white transition-all p-1.5 px-3 group shadow-sm overflow-hidden">
+                            <div className="relative flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-[24px] focus-within:border-adhoc-violet focus-within:ring-1 focus-within:ring-adhoc-violet/20 focus-within:bg-white transition-all p-1.5 px-3 group shadow-sm">
                                 <textarea
                                     value={input}
                                     onChange={e => setInput(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                                    placeholder="Preguntale lo que quieras a Tuqui"
-                                    className="flex-1 bg-transparent border-none rounded-2xl pl-2 pr-2 py-2.5 resize-none focus:outline-none min-h-[44px] max-h-[200px] text-[15px] leading-relaxed"
+                                    placeholder="Preguntale a Tuqui"
+                                    className="flex-1 bg-transparent border-none rounded-2xl pl-2 pr-2 py-2.5 resize-none focus:outline-none min-h-[44px] max-h-[200px] text-[15px] leading-relaxed w-0"
                                     rows={1}
                                 />
                                 <div className="flex items-center gap-1 pb-1">
