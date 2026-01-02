@@ -89,3 +89,24 @@ export async function updateUserRole(userId: string, isAdmin: boolean) {
 
     revalidatePath('/admin/users')
 }
+
+export async function updateUserPhone(userId: string, whatsappPhone: string) {
+    const session = await auth()
+    if (!session?.tenant?.id || !session.isAdmin) {
+        throw new Error('No autorizado')
+    }
+
+    const db = getMasterClient()
+    const { error } = await db
+        .from('users')
+        .update({ whatsapp_phone: whatsappPhone || null })
+        .eq('id', userId)
+        .eq('tenant_id', session.tenant.id)
+
+    if (error) {
+        console.error('Error updating user phone:', error)
+        throw new Error('Error al actualizar teléfono')
+    }
+
+    revalidatePath('/admin/users')
+}

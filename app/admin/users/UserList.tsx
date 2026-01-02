@@ -1,7 +1,7 @@
 'use client'
 
-import { Shield, ShieldCheck, Trash2 } from 'lucide-react'
-import { updateUserRole, deleteUser } from './actions'
+import { Shield, ShieldCheck, Trash2, Phone, Check, X } from 'lucide-react'
+import { updateUserRole, deleteUser, updateUserPhone } from './actions'
 import { useState } from 'react'
 
 interface User {
@@ -9,11 +9,13 @@ interface User {
     email: string
     is_admin: boolean
     role: string
+    whatsapp_phone?: string
     created_at: string
 }
 
 export function UserList({ initialUsers, currentUserEmail }: { initialUsers: User[], currentUserEmail: string }) {
     const [isLoading, setIsLoading] = useState<string | null>(null)
+    const [editingPhone, setEditingPhone] = useState<{ id: string, value: string } | null>(null)
 
     const handleToggleAdmin = async (user: User) => {
         if (user.email === currentUserEmail) return
@@ -41,29 +43,75 @@ export function UserList({ initialUsers, currentUserEmail }: { initialUsers: Use
         }
     }
 
+    const handleSavePhone = async (userId: string) => {
+        if (!editingPhone) return
+        setIsLoading(userId)
+        try {
+            await updateUserPhone(userId, editingPhone.value)
+            setEditingPhone(null)
+        } catch (e) {
+            alert('Error al actualizar teléfono')
+        } finally {
+            setIsLoading(null)
+        }
+    }
+
     return (
         <div className="space-y-3">
             {initialUsers.map((u) => (
                 <div key={u.id} className={`bg-white p-4 rounded-2xl border border-adhoc-lavender/20 shadow-sm flex items-center justify-between group hover:border-adhoc-violet/30 transition-all ${isLoading === u.id ? 'opacity-50' : ''}`}>
-                    <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${u.is_admin ? 'bg-adhoc-lavender text-adhoc-violet' : 'bg-gray-100 text-gray-400'}`}>
+                    <div className="flex items-center gap-4 flex-grow">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${u.is_admin ? 'bg-adhoc-lavender text-adhoc-violet' : 'bg-gray-100 text-gray-400'}`}>
                             {u.email[0].toUpperCase()}
                         </div>
-                        <div>
+                        <div className="flex-grow min-w-0">
                             <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-gray-900 leading-none">{u.email}</span>
+                                <span className="text-sm font-semibold text-gray-900 leading-none truncate">{u.email}</span>
                                 {u.is_admin ? (
-                                    <span className="px-2 py-0.5 rounded-full bg-adhoc-lavender/40 text-adhoc-violet text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 border border-adhoc-lavender/50">
+                                    <span className="px-2 py-0.5 rounded-full bg-adhoc-lavender/40 text-adhoc-violet text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 border border-adhoc-lavender/50 shrink-0">
                                         <ShieldCheck className="w-2.5 h-2.5" />
                                         Admin
                                     </span>
                                 ) : (
-                                    <span className="px-2 py-0.5 rounded-full bg-gray-50 text-gray-400 text-[9px] font-bold uppercase tracking-wider border border-gray-100">
+                                    <span className="px-2 py-0.5 rounded-full bg-gray-50 text-gray-400 text-[9px] font-bold uppercase tracking-wider border border-gray-100 shrink-0">
                                         Standard
                                     </span>
                                 )}
                             </div>
-                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-tight mt-1.5 leading-none">
+
+                            {/* WhatsApp Phone Field */}
+                            <div className="mt-2 flex items-center gap-2 group/phone">
+                                <Phone className="w-3 h-3 text-gray-400" />
+                                {editingPhone?.id === u.id ? (
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="text"
+                                            value={editingPhone.value}
+                                            onChange={(e) => setEditingPhone({ ...editingPhone, value: e.target.value })}
+                                            placeholder="whatsapp:+123456789"
+                                            className="text-[11px] font-medium text-adhoc-violet bg-adhoc-lavender/20 border-b border-adhoc-violet outline-none w-32 px-1"
+                                            autoFocus
+                                        />
+                                        <button onClick={() => handleSavePhone(u.id)} className="text-green-500 hover:text-green-600 transition-colors">
+                                            <Check className="w-3 h-3" />
+                                        </button>
+                                        <button onClick={() => setEditingPhone(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <span
+                                            onClick={() => setEditingPhone({ id: u.id, value: u.whatsapp_phone || '' })}
+                                            className={`text-[11px] font-medium cursor-pointer hover:text-adhoc-violet transition-colors ${u.whatsapp_phone ? 'text-gray-600' : 'text-gray-300 italic'}`}
+                                        >
+                                            {u.whatsapp_phone || 'Sin teléfono WhatsApp'}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-tight mt-1 leading-none">
                                 Miembro desde {new Date(u.created_at).toLocaleDateString('es-AR')}
                             </p>
                         </div>

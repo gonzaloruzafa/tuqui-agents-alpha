@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
 
         const params = new URLSearchParams(rawBody)
 
-        // 0. Handle Twilio Debugger
-        if (params.has('Payload')) {
-            console.log('[WhatsApp] Ignoring Twilio Debugger event')
+        // 0. Handle Twilio Debugger or Status Callbacks
+        if (params.has('Payload') || params.has('MessageStatus')) {
+            console.log('[WhatsApp] Ignoring Twilio event:', params.has('Payload') ? 'Debugger' : 'Status Callback')
             return new Response('<Response></Response>', {
                 status: 200,
                 headers: { 'Content-Type': 'text/xml' }
