@@ -204,14 +204,16 @@ export default function ChatPage() {
     const [isVoiceOpen, setIsVoiceOpen] = useState(false)
     const transcriptRef = useRef('')
 
-    // Setup Speech Recognition - exactly as it was when it worked
+    // Setup Speech Recognition
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
             if (SpeechRecognition) {
                 const rec = new SpeechRecognition()
                 rec.lang = 'es-AR'
-                rec.continuous = true
+                // On mobile, continuous mode causes severe duplication issues
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                rec.continuous = !isMobile // false on mobile, true on desktop
                 rec.interimResults = true
 
                 rec.onresult = (event: any) => {
@@ -219,6 +221,7 @@ export default function ChatPage() {
                     for (let i = 0; i < event.results.length; ++i) {
                         totalTranscript += event.results[i][0].transcript
                     }
+                    console.log('[Recording] onresult:', totalTranscript)
                     setLastTranscript(totalTranscript)
                     transcriptRef.current = totalTranscript
                 }
@@ -229,7 +232,11 @@ export default function ChatPage() {
                 }
 
                 rec.onend = () => {
-                    // Do not auto-close unless error
+                    console.log('[Recording] onend - transcript:', transcriptRef.current)
+                    // On mobile, auto-confirm if we have transcript
+                    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && transcriptRef.current.trim()) {
+                        // Don't auto-stop, let user confirm
+                    }
                 }
 
                 setRecognition(rec)
@@ -579,21 +586,21 @@ export default function ChatPage() {
 
             {/* Main Chat */}
             <div className="flex-1 flex flex-col min-w-0 h-full relative">
-                <header className="h-14 border-b border-adhoc-lavender/30 flex items-center px-4 justify-between bg-white z-10 shrink-0">
-                    <div className="flex items-center gap-3">
+                <header className="h-14 border-b border-adhoc-lavender/30 flex items-center px-3 md:px-4 justify-between bg-white z-10 shrink-0">
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0">
                         {/* Toggle sidebar */}
-                        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-adhoc-lavender/20 rounded-lg text-gray-500 hover:text-adhoc-violet transition-colors">
+                        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 md:p-2 hover:bg-adhoc-lavender/20 rounded-lg text-gray-500 hover:text-adhoc-violet transition-colors flex-shrink-0">
                             {sidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeft className="w-5 h-5" />}
                         </button>
-                        {/* Logo - always visible when sidebar collapsed */}
+                        {/* Logo - visible when sidebar collapsed, hidden on mobile to save space */}
                         {!sidebarOpen && (
-                            <img src="/adhoc-logo.png" alt="Adhoc" className="h-7 w-auto" />
+                            <img src="/adhoc-logo.png" alt="Adhoc" className="h-6 md:h-7 w-auto hidden md:block" />
                         )}
-                        {!sidebarOpen && <div className="h-6 w-px bg-adhoc-lavender/50 mx-1"></div>}
-                        <div className="w-8 h-8 rounded-full bg-adhoc-lavender/30 flex items-center justify-center">
+                        {!sidebarOpen && <div className="h-6 w-px bg-adhoc-lavender/50 mx-1 hidden md:block"></div>}
+                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-adhoc-lavender/30 flex items-center justify-center flex-shrink-0">
                             {getAgentIcon(agent.icon, 'sm', 'text-adhoc-violet')}
                         </div>
-                        <span className="font-medium text-gray-800">{agent.name}</span>
+                        <span className="font-medium text-gray-800 truncate">{agent.name}</span>
                     </div>
                     {/* Right side: Admin link */}
                     <div className="flex items-center gap-2">
@@ -644,27 +651,34 @@ export default function ChatPage() {
                 <div className="p-3 md:p-6 bg-white border-t border-adhoc-lavender/20 pb-[env(safe-area-inset-bottom,12px)] md:pb-6">
                     <div className="max-w-3xl mx-auto">
                         {isRecording ? (
-                            <div className="w-full bg-gray-50 border border-adhoc-violet/30 rounded-full px-4 py-2 flex items-center gap-3 animate-in fade-in zoom-in duration-300 shadow-sm">
-                                <div className="flex-1 flex items-center gap-2 overflow-hidden">
+                            <div className="w-full bg-gray-50 border border-adhoc-violet/30 rounded-2xl px-4 py-3 flex flex-col gap-2 animate-in fade-in zoom-in duration-300 shadow-sm">
+                                <div className="flex items-center gap-3">
                                     <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
-                                    <AudioVisualizer isRecording={isRecording} />
+                                    <div className="flex-1">
+                                        <AudioVisualizer isRecording={isRecording} />
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={cancelRecording}
+                                            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                                            title="Cancelar"
+                                        >
+                                            <X className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                            onClick={confirmRecording}
+                                            className="p-2 bg-adhoc-violet text-white rounded-full hover:bg-adhoc-violet/90 shadow-sm transition-all"
+                                            title="Terminar y revisar"
+                                        >
+                                            <Check className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={cancelRecording}
-                                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                                        title="Cancelar"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        onClick={confirmRecording}
-                                        className="p-2 bg-adhoc-violet text-white rounded-full hover:bg-adhoc-violet/90 shadow-sm transition-all"
-                                        title="Terminar y revisar"
-                                    >
-                                        <Check className="w-5 h-5" />
-                                    </button>
-                                </div>
+                                {lastTranscript && (
+                                    <div className="text-sm text-gray-600 px-1 truncate">
+                                        {lastTranscript}
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="relative flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-[24px] focus-within:border-adhoc-violet focus-within:ring-1 focus-within:ring-adhoc-violet/20 focus-within:bg-white transition-all p-1.5 px-3 group shadow-sm">
