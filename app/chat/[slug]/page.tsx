@@ -199,64 +199,82 @@ export default function ChatPage() {
     const [sessions, setSessions] = useState<Session[]>([])
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionIdParam)
     const [isRecording, setIsRecording] = useState(false)
-    const [recognition, setRecognition] = useState<any>(null)
     const [lastTranscript, setLastTranscript] = useState('')
     const [isVoiceOpen, setIsVoiceOpen] = useState(false)
     const transcriptRef = useRef('')
 
-    // Setup Speech Recognition
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-            if (SpeechRecognition) {
-                const rec = new SpeechRecognition()
-                rec.lang = 'es-AR'
-                rec.continuous = true
-                rec.interimResults = true
+    // Speech Recognition - created on demand, not on mount
+    const recognitionRef = useRef<any>(null)
 
-                rec.onresult = (event: any) => {
-                    let totalTranscript = ''
-                    for (let i = 0; i < event.results.length; ++i) {
-                        totalTranscript += event.results[i][0].transcript
-                    }
-                    setLastTranscript(totalTranscript)
-                    transcriptRef.current = totalTranscript
-                }
+    const getOrCreateRecognition = () => {
+        if (recognitionRef.current) return recognitionRef.current
+        
+        if (typeof window === 'undefined') return null
+        
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+        if (!SpeechRecognition) return null
+        
+        const rec = new SpeechRecognition()
+        rec.lang = 'es-AR'
+        rec.continuous = true
+        rec.interimResults = true
 
-                rec.onerror = (event: any) => {
-                    console.error('Speech recognition error:', event.error)
-                    setIsRecording(false)
-                }
+        rec.onresult = (event: any) => {
+            let totalTranscript = ''
+            for (let i = 0; i < event.results.length; ++i) {
+                totalTranscript += event.results[i][0].transcript
+            }
+            setLastTranscript(totalTranscript)
+            transcriptRef.current = totalTranscript
+        }
 
-                rec.onend = () => {
-                    // Do not auto-close unless error
-                }
-
-                setRecognition(rec)
+        rec.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error)
+            if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                setIsRecording(false)
             }
         }
-    }, [])
+
+        rec.onend = () => {
+            // Don't auto-restart
+        }
+
+        recognitionRef.current = rec
+        return rec
+    }
+
+    // Check if speech recognition is supported
+    const isSpeechSupported = typeof window !== 'undefined' && 
+        ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
 
     const startRecording = async () => {
-        if (!recognition) return
+        const recognition = getOrCreateRecognition()
+        if (!recognition) {
+            console.error('[Recording] Speech recognition not supported')
+            return
+        }
         setLastTranscript('')
         transcriptRef.current = ''
         
         // Request mic permission first (required for mobile and some desktop browsers)
         try {
+            console.log('[Recording] Requesting mic permission...')
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            console.log('[Recording] Got stream, stopping tracks...')
             // Stop the stream immediately - we just need the permission
             stream.getTracks().forEach(track => track.stop())
             
+            console.log('[Recording] Starting recognition...')
             recognition.start()
             setIsRecording(true)
-        } catch (err) {
-            console.error('Mic permission denied:', err)
-            // Optionally show error to user
+            console.log('[Recording] Started successfully')
+        } catch (err: any) {
+            console.error('[Recording] Mic permission denied:', err?.name, err?.message)
         }
     }
 
     const cancelRecording = () => {
+        const recognition = recognitionRef.current
         if (!recognition) return
         recognition.stop()
         setLastTranscript('')
@@ -265,6 +283,7 @@ export default function ChatPage() {
     }
 
     const confirmRecording = () => {
+        const recognition = recognitionRef.current
         if (!recognition) return
         recognition.stop()
 
@@ -528,8 +547,8 @@ export default function ChatPage() {
 
             {/* Sidebar */}
             <aside className={`
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          fixed md:relative top-0 left-0 h-full z-40 bg-white flex flex-col transition-transform duration-300 ease-in-out border-r border-adhoc-lavender/30 w-[260px] shadow-xl md:shadow-none
+          ${sidebarOpen ? 'w-[260px]' : 'w-0 -ml-[260px] md:ml-0 md:w-0'}
+          relative h-full z-40 bg-white flex flex-col transition-all duration-300 ease-in-out border-r border-adhoc-lavender/30 overflow-hidden shrink-0
       `}>
                 <div className="p-3 flex items-center justify-between border-b border-gray-200/50 h-14">
                     {/* Logo */}
@@ -580,7 +599,7 @@ export default function ChatPage() {
                 {/* User bottom section could go here */}
             </aside>
 
-            {/* Overlay for mobile when sidebar open */}
+            {/* Mobile overlay when sidebar open */}
             {sidebarOpen && (
                 <div
                     className="fixed inset-0 bg-black/30 z-30 md:hidden"
@@ -688,7 +707,7 @@ export default function ChatPage() {
                                     rows={1}
                                 />
                                 <div className="flex items-center gap-1 pb-1">
-                                    {recognition && (
+                                    {isSpeechSupported && (
                                         <button
                                             onClick={startRecording}
                                             className="p-2 text-gray-400 hover:text-adhoc-violet hover:bg-adhoc-lavender/20 rounded-full transition-all"
