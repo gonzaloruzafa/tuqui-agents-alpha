@@ -48,8 +48,12 @@ export async function POST(req: NextRequest) {
 
         const { id: tenantId, userEmail } = tenantInfo
 
-        // 2. Get Tuqui (the only agent)
+        // 2. Get Tuqui (the default agent for WhatsApp)
         const agent = await getTuqui(tenantId)
+        if (!agent) {
+            console.error(`[WhatsApp] Tuqui agent not found for tenant ${tenantId}`)
+            return new Response('Agent not found', { status: 500 })
+        }
         console.log(`[WhatsApp] Using Tuqui with tools: ${agent.tools?.join(', ')}`)
         
         // 3. Get/create session

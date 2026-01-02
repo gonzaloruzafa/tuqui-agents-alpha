@@ -71,15 +71,8 @@ export async function POST(req: Request) {
             return new Response('Agent not found', { status: 404 })
         }
 
-        // 3. RAG Context
-        let systemSystem = agent.system_prompt || 'Sos un asistente útil.'
-
-        // 3.1 Inject Company Context if available
-        const companyContext = await getCompanyContext(tenantId)
-        if (companyContext) {
-            systemSystem += `\n\nCONTEXTO DE LA EMPRESA:\n${companyContext}`
-            console.log('[Chat] Company context injected')
-        }
+        // 3. System Prompt (already merged with custom instructions + company context)
+        let systemSystem = agent.merged_system_prompt || agent.system_prompt || 'Sos un asistente útil.'
 
         // Add context persistence rule
         systemSystem += '\n\nIMPORTANTE: Estás en una conversación fluida. Usa siempre los mensajes anteriores para entender referencias como "él", "eso", "ahora", o "qué productos?". No pidas aclaraciones si el contexto ya está en el historial.'
