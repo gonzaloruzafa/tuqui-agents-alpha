@@ -52,15 +52,21 @@ export async function POST(req: NextRequest) {
         console.log(`[WhatsApp] Routed to Tenant: ${tenantId} (${schema}) for ${userEmail}`)
 
         // 2. Load Orchestrator Agent (default or based on keywords)
-        // For POC we'll use a hardcoded agent slug or the first one found
-        const agentSlug = 'bi-analyst' // Default for now, can be an env var
-        const agent = await getAgentBySlug(tenantId, agentSlug)
+        const { getAgentsForTenant } = await import('@/lib/agents/service')
+        const allAgents = await getAgentsForTenant(tenantId)
+        console.log(`[WhatsApp] Available agents for tenant ${tenantId}:`, allAgents.map(a => a.slug).join(', '))
 
-        if (!agent) {
-            console.error(`[WhatsApp] Agent ${agentSlug} not found for tenant ${tenantId}`)
-            await sendWhatsApp(tenantId, from, "Lo siento, mi configuración está incompleta. Por favor contacta a soporte.")
-            return new Response('Agent not found', { status: 404 })
+        if (allAgents.length === 0) {
+            console.error(`[WhatsApp] No agents found for tenant ${tenantId}`)
+            await sendWhatsApp(tenantId, from, "Lo siento, no tenés agentes configurados. Por favor contacta a soporte.")
+            return new Response('No agents found', { status: 404 })
         }
+
+        // Try to find a default agent: tuqui-chat or the first one available
+        const preferredSlug = 'tuqui-chat'
+        let agent = allAgents.find(a => a.slug === preferredSlug) || allAgents[0]
+
+        console.log(`[WhatsApp] selected Agent: ${agent.slug} (${agent.id})`)
 
         // 3. Prepare AI Context
         const systemPrompt = agent.system_prompt || ''
