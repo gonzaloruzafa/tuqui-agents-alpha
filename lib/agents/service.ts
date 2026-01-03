@@ -220,6 +220,25 @@ export async function getAgentsForTenant(tenantId: string): Promise<Agent[]> {
 }
 
 /**
+ * Get available agent slugs for a tenant (for intent routing)
+ */
+export async function getAvailableAgentSlugs(tenantId: string): Promise<string[]> {
+    const db = await getTenantClient(tenantId)
+    
+    const { data, error } = await db
+        .from('agents')
+        .select('slug')
+        .eq('is_active', true)
+    
+    if (error) {
+        console.error('[Agents] Error fetching agent slugs:', error)
+        return []
+    }
+    
+    return (data || []).map(a => a.slug)
+}
+
+/**
  * Get a specific agent by slug for a tenant
  */
 export async function getAgentBySlug(tenantId: string, slug: string): Promise<AgentWithMergedPrompt | null> {

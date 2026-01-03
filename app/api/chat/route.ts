@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth/config'
-import { getAgentBySlug } from '@/lib/agents/service'
+import { getAgentBySlug, getAvailableAgentSlugs } from '@/lib/agents/service'
 import { searchDocuments } from '@/lib/rag/search'
 import { getToolsForAgent } from '@/lib/tools/executor'
 import { checkUsageLimit, trackUsage } from '@/lib/billing/tracker'
@@ -7,6 +7,7 @@ import { streamChatWithOdoo } from '@/lib/tools/gemini-odoo'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { streamText } from 'ai'
 import { getClient } from '@/lib/supabase/client'
+import { detectIntent } from '@/lib/agents/intent-router'
 
 const google = createGoogleGenerativeAI({
     apiKey: process.env.GEMINI_API_KEY
@@ -65,10 +66,32 @@ export async function POST(req: Request) {
         const estimatedInputTokens = Math.ceil(inputContent.length / 3)
         await checkUsageLimit(tenantId, session.user.email, estimatedInputTokens)
 
-        // 2. Get Agent
-        const agent = await getAgentBySlug(tenantId, agentSlug)
+        // 2. Get Agent (with smart routing)
+        let effectiveAgentSlug = agentSlug
+        
+        // If requesting Tuqui, check if we should route to a specialized agent
+        if (agentSlug === 'tuqui') {
+            try {
+                const availableAgents = await getAvailableAgentSlugs(tenantId)
+                const routingDecision = detectIntent(inputContent, availableAgents)
+                
+                if (routingDecision.agentSlug !== 'tuqui' && routingDecision.confidence === 'high') {
+                    console.log(`[Chat] Routing to specialized agent: ${routingDecision.agentSlug} (${routingDecision.reason})`)
+                    effectiveAgentSlug = routingDecision.agentSlug
+                }
+            } catch (routingError) {
+                console.warn('[Chat] Routing detection failed, using default:', routingError)
+            }
+        }
+        
+        let agent = await getAgentBySlug(tenantId, effectiveAgentSlug)
         if (!agent) {
-            return new Response('Agent not found', { status: 404 })
+            // Fallback to original slug if routed agent not found
+            agent = await getAgentBySlug(tenantId, agentSlug)
+            if (!agent) {
+                return new Response('Agent not found', { status: 404 })
+            }
+            console.log(`[Chat] Routed agent ${effectiveAgentSlug} not found, using ${agentSlug}`)
         }
 
         // 3. System Prompt (already merged with custom instructions + company context)
