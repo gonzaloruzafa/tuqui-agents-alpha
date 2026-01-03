@@ -220,7 +220,43 @@ export async function POST(req: Request) {
                 }
             }
 
-            console.log('[Chat] Calling streamText with model: gemini-2.0-flash')
+            const hasTools = Object.keys(tools).length > 0
+            console.log('[Chat] Has tools:', hasTools, 'Tools:', Object.keys(tools))
+
+            // Use native Gemini wrapper when we have tools (AI SDK has schema conversion issues)
+            if (hasTools) {
+                console.log('[Chat] Using native Gemini wrapper for tools')
+                const { generateTextNative } = await import('@/lib/tools/native-gemini')
+                
+                try {
+                    const result = await generateTextNative({
+                        system: systemSystem,
+                        messages,
+                        tools,
+                        maxSteps: 5
+                    })
+
+                    // Track usage
+                    try {
+                        await trackUsage(tenantId, session.user.email!, result.usage.totalTokens || 0)
+                    } catch (e) {
+                        console.error('[Chat] Failed to track usage:', e)
+                    }
+
+                    return new Response(result.text, {
+                        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+                    })
+                } catch (nativeError: any) {
+                    console.error('[Chat] Native Gemini error:', nativeError)
+                    return new Response(JSON.stringify({
+                        error: 'Error generating response with tools',
+                        details: nativeError.message
+                    }), { status: 500 })
+                }
+            }
+
+            // No tools - use AI SDK streamText
+            console.log('[Chat] Calling streamText with model: gemini-2.0-flash (no tools)')
             const result = streamText({
                 model: google('gemini-2.0-flash'),
                 system: systemSystem,
@@ -228,9 +264,7 @@ export async function POST(req: Request) {
                     role: m.role as 'user' | 'assistant' | 'system',
                     content: m.content
                 })),
-                ...(Object.keys(tools).length > 0 ? { tools, maxSteps: 5 } : {}),
                 onFinish: async (event: any) => {
-                    // 6. Async Billing Tracking (After processing)
                     try {
                         const { usage } = event
                         console.log('[Chat] Stream finished. Usage:', usage)

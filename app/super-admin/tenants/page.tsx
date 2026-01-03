@@ -13,8 +13,11 @@ interface Tenant {
 }
 
 export default function SuperAdminTenantsPage() {
+    console.log('[SuperAdmin Page] Component mounting...')
+    
     const [tenants, setTenants] = useState<Tenant[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [showModal, setShowModal] = useState(false)
     const [syncing, setSyncing] = useState(false)
     const [formData, setFormData] = useState({
@@ -26,6 +29,7 @@ export default function SuperAdminTenantsPage() {
 
     const fetchTenants = async () => {
         setLoading(true)
+        setError(null)
         console.log('[SuperAdmin Page] Fetching tenants...')
         try {
             const res = await fetch('/api/super-admin/tenants')
@@ -33,13 +37,14 @@ export default function SuperAdminTenantsPage() {
             const data = await res.json()
             console.log('[SuperAdmin Page] Response data:', data)
             if (res.ok) {
-                setTenants(data)
+                setTenants(Array.isArray(data) ? data : [])
             } else {
                 console.error('[SuperAdmin Page] Error:', data.error)
-                alert('Error al cargar tenants: ' + data.error)
+                setError(data.error || 'Error desconocido')
             }
-        } catch (error) {
-            console.error('[SuperAdmin Page] Fetch error:', error)
+        } catch (err: any) {
+            console.error('[SuperAdmin Page] Fetch error:', err)
+            setError(err.message || 'Error de conexión')
         }
         setLoading(false)
     }
@@ -135,6 +140,16 @@ export default function SuperAdminTenantsPage() {
                 {loading ? (
                     <div className="flex justify-center py-12">
                         <Loader2 className="w-8 h-8 animate-spin text-adhoc-violet" />
+                    </div>
+                ) : error ? (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                        <p className="text-red-600 font-medium">Error: {error}</p>
+                        <button 
+                            onClick={fetchTenants}
+                            className="mt-4 px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg text-red-700"
+                        >
+                            Reintentar
+                        </button>
                     </div>
                 ) : (
                     <div className="bg-white rounded-2xl border border-adhoc-lavender/30 shadow-sm overflow-hidden">

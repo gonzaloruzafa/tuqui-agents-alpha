@@ -60,11 +60,21 @@ export async function generateTextNative({
                     parameters: {
                         type: SchemaType.OBJECT,
                         properties: {
-                            query: { type: SchemaType.STRING, description: 'Búsqueda' },
-                            search_depth: { type: SchemaType.STRING, description: 'basic o advanced' },
-                            max_results: { type: SchemaType.NUMBER, description: 'Resultados' }
+                            query: { type: SchemaType.STRING, description: 'Búsqueda' }
                         },
                         required: ['query']
+                    }
+                })
+            } else if (name === 'web_investigator') {
+                functionDeclarations.push({
+                    name,
+                    description: tool.description,
+                    parameters: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                            url: { type: SchemaType.STRING, description: 'URL completa a investigar' }
+                        },
+                        required: ['url']
                     }
                 })
             } else {
