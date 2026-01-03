@@ -27,13 +27,32 @@ export async function GET() {
     
     try {
         const supabase = supabaseAdmin()
+        
+        // First try simple query to debug
+        console.log('[SuperAdmin API] Testing simple tenants query...')
+        const { data: simpleTenants, error: simpleError } = await supabase
+            .from('tenants')
+            .select('id, name, created_at')
+            .order('created_at', { ascending: false })
+        
+        console.log('[SuperAdmin API] Simple query result:', { 
+            count: simpleTenants?.length, 
+            error: simpleError?.message 
+        })
+
+        if (simpleError) {
+            console.error('[SuperAdmin API] Simple query error:', simpleError)
+            return NextResponse.json({ error: simpleError.message }, { status: 500 })
+        }
+
+        // Now try with users join (left join to not exclude tenants without users)
         const { data: tenants, error } = await supabase
             .from('tenants')
             .select(`
                 id,
                 name,
                 created_at,
-                users!inner(email, is_admin)
+                users(email, is_admin)
             `)
             .order('created_at', { ascending: false })
 
