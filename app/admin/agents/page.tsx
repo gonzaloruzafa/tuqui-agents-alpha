@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Brain, Wrench, Plus, Sparkles, X, Loader2 } from 'lucide-react'
-import { Header } from '@/components/Header'
-import { Footer } from '@/components/Footer'
 import { AdminSubHeader } from '@/components/admin/AdminSubHeader'
 
 interface Agent {
@@ -100,9 +98,7 @@ export default function AdminAgentsPage() {
     ]
 
     return (
-        <div className="min-h-screen bg-gray-50/50 font-sans flex flex-col">
-            <Header />
-
+        <>
             <AdminSubHeader
                 title="Agentes"
                 backHref="/admin"
@@ -180,8 +176,6 @@ export default function AdminAgentsPage() {
                     </div>
                 )}
             </div>
-
-            <Footer />
 
             {/* Modal crear agente */}
             {showModal && (
@@ -293,6 +287,6 @@ export default function AdminAgentsPage() {
                     </div>
                 </div>
             )}
-        </div>
+        </>
     )
 }

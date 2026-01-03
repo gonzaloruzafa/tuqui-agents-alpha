@@ -15,8 +15,11 @@ async function searchWeb(
     const apiKey = process.env.TAVILY_API_KEY
 
     if (!apiKey) {
+        console.error('[Tavily] TAVILY_API_KEY no configurada')
         return { error: 'TAVILY_API_KEY no configurada' }
     }
+
+    console.log('[Tavily] Searching:', query)
 
     try {
         const res = await fetch('https://api.tavily.com/search', {
@@ -37,10 +40,12 @@ async function searchWeb(
 
         if (!res.ok) {
             const error = await res.text()
-            return { error: `Tavily error: ${error}` }
+            console.error('[Tavily] Error response:', res.status, error)
+            return { error: `Tavily error (${res.status}): ${error}` }
         }
 
         const data = await res.json()
+        console.log('[Tavily] Success, sources:', data.results?.length || 0)
 
         return {
             answer: data.answer || null,
@@ -51,6 +56,7 @@ async function searchWeb(
             })) || []
         }
     } catch (error: any) {
+        console.error('[Tavily] Exception:', error.message)
         return { error: error.message }
     }
 }

@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Building, Plus, RefreshCw, Loader2 } from 'lucide-react'
-import { Header } from '@/components/Header'
-import { Footer } from '@/components/Footer'
 
 interface Tenant {
     id: string
@@ -103,9 +101,7 @@ export default function SuperAdminTenantsPage() {
     useEffect(() => { fetchTenants() }, [])
 
     return (
-        <div className="min-h-screen bg-gray-50/50 font-sans flex flex-col">
-            <Header />
-
+        <>
             <div className="flex-grow max-w-7xl mx-auto px-6 py-10 w-full">
                 <div className="flex justify-between items-center mb-8">
                     <div>
@@ -113,23 +109,23 @@ export default function SuperAdminTenantsPage() {
                             <Building className="w-8 h-8 text-adhoc-violet" />
                             Gestión de Tenants
                         </h1>
-                        <p className="text-gray-500 mt-1">Panel Super Admin - Provisioning Multi-Tenant</p>
-                    </div>
+                    <p className="text-gray-500 mt-1">Panel Super Admin - Provisioning Multi-Tenant</p>
+                </div>
 
-                    <div className="flex gap-3">
-                        <button
-                            onClick={syncMasters}
-                            disabled={syncing}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
-                        >
-                            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                            {syncing ? 'Sincronizando...' : 'Sync Masters'}
-                        </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={syncMasters}
+                        disabled={syncing}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+                        {syncing ? 'Sincronizando...' : 'Sync Masters'}
+                    </button>
 
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-adhoc-violet text-white rounded-lg hover:bg-adhoc-violet/90 shadow-sm"
-                        >
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-adhoc-violet text-white rounded-lg hover:bg-adhoc-violet/90 shadow-sm"
+                    >
                             <Plus className="w-4 h-4" />
                             Nuevo Tenant
                         </button>
@@ -192,8 +188,6 @@ export default function SuperAdminTenantsPage() {
                     </div>
                 )}
             </div>
-
-            <Footer />
 
             {/* Modal crear tenant */}
             {showModal && (
@@ -259,6 +253,6 @@ export default function SuperAdminTenantsPage() {
                     </div>
                 </div>
             )}
-        </div>
+        </>
     )
 }
