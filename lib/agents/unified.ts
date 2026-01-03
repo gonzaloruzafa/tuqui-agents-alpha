@@ -23,11 +23,11 @@ export const TUQUI_UNIFIED = {
     icon: 'Sparkles',
     color: 'adhoc-violet',
     
-    // Todas las tools disponibles
+    // Todas las tools disponibles (nombres estandarizados)
     tools: [
         'odoo_intelligent_query',  // Odoo BI Agent
-        'tavily',                  // Navegador Web (búsqueda)
-        'firecrawl',               // Investigador Web (scraping)
+        'web_search',              // Navegador Web (búsqueda via Tavily)
+        'web_investigator',        // Investigador Web (scraping via Firecrawl)
     ],
     
     // RAG siempre habilitado

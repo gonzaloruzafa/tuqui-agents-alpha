@@ -25,7 +25,8 @@ export async function generateTextNative({
     if (tools) {
         for (const [name, tool] of Object.entries(tools)) {
             // Manual conversion for each tool type
-            if (name === 'web_search') {
+            // Aliases: tavily -> web_search, firecrawl -> web_investigator
+            if (name === 'web_search' || name === 'tavily') {
                 functionDeclarations.push({
                     name,
                     description: tool.description || 'Buscar información en internet',
@@ -37,9 +38,9 @@ export async function generateTextNative({
                         required: ['query']
                     }
                 })
-            } else if (name === 'web_investigator') {
+            } else if (name === 'web_investigator' || name === 'firecrawl') {
                 functionDeclarations.push({
-                    name,
+                    name: 'web_investigator', // Standardize name
                     description: tool.description || 'Extraer contenido de una página web',
                     parameters: {
                         type: SchemaType.OBJECT,

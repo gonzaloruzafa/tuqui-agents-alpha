@@ -43,8 +43,9 @@ export default function SuperAdminTenantsPage() {
         } catch (err: any) {
             console.error('[SuperAdmin Page] Fetch error:', err)
             setError(err.message || 'Error de conexión')
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }
 
     const createTenant = async (e: React.FormEvent) => {
