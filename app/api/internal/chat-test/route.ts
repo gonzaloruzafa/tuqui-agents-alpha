@@ -162,9 +162,9 @@ export async function POST(req: NextRequest) {
             responseLength: response.length,
             // Quality indicators
             quality: {
-                hasNumericData: /\$[\d.,]+|\d+\s*(unidades|productos|ventas|pesos)/i.test(response),
+                hasNumericData: /\$\s?[\d.,]+|\d+\s*(unidades|productos|ventas|pesos|facturas|clientes)/i.test(response),
                 hasList: response.includes('- ') || response.includes('• ') || /^\d+\./m.test(response),
-                hasError: /error|no pude|no encontré|disculpá/i.test(response),
+                hasError: /error|no pude|no encontré|disculpá|no hay datos/i.test(response),
                 usedContext: messages.length > 1 && !/(qué|cuál|a qué te refer)/i.test(response)
             }
         }

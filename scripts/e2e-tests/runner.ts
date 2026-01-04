@@ -54,6 +54,7 @@ interface Test {
     messages: TestMessage[]
     expectations: TestExpectations
     description?: string
+    critical?: boolean
 }
 
 interface TestSuite {
@@ -99,9 +100,9 @@ interface SuiteResult {
 // UTILITIES
 // =============================================================================
 
-function parseArgs(): { env: string; suite?: string; subset?: string; verbose: boolean } {
+function parseArgs(): { env: string; suite?: string; subset?: string; verbose: boolean; concurrent: number } {
     const args = process.argv.slice(2)
-    const result = { env: 'prod', suite: undefined as string | undefined, subset: undefined as string | undefined, verbose: false }
+    const result = { env: 'prod', suite: undefined as string | undefined, subset: undefined as string | undefined, verbose: false, concurrent: 1 }
     
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--env' && args[i + 1]) {
@@ -112,6 +113,9 @@ function parseArgs(): { env: string; suite?: string; subset?: string; verbose: b
             i++
         } else if (args[i] === '--subset' && args[i + 1]) {
             result.subset = args[i + 1]
+            i++
+        } else if (args[i] === '--concurrent' && args[i + 1]) {
+            result.concurrent = parseInt(args[i + 1], 10) || 1
             i++
         } else if (args[i] === '--verbose' || args[i] === '-v') {
             result.verbose = true
@@ -259,11 +263,12 @@ async function runSuite(
     baseUrl: string,
     tenantId: string,
     suite: TestSuite,
-    verbose: boolean
+    verbose: boolean,
+    concurrent: number = 1
 ): Promise<SuiteResult> {
     console.log(`\n${'═'.repeat(60)}`)
     console.log(`📦 Suite: ${suite.name}`)
-    console.log(`   Category: ${suite.category} | Tests: ${suite.tests.length}`)
+    console.log(`   Category: ${suite.category} | Tests: ${suite.tests.length}${concurrent > 1 ? ` | Concurrent: ${concurrent}` : ''}`)
     console.log(`${'─'.repeat(60)}`)
     
     const results: TestResult[] = []
@@ -271,28 +276,64 @@ async function runSuite(
     let failed = 0
     let totalLatency = 0
     
-    for (const test of suite.tests) {
-        process.stdout.write(`   ${test.id}: `)
-        
-        const result = await runTest(baseUrl, tenantId, suite.id, test, verbose)
-        results.push(result)
-        totalLatency += result.latencyMs
-        
-        if (result.passed) {
-            passed++
-            console.log(`✅ (${result.latencyMs}ms) → ${result.routing.selectedAgent || 'base'}`)
-        } else {
-            failed++
-            console.log(`❌ (${result.latencyMs}ms)`)
-            for (const failure of result.failures) {
-                console.log(`      ⚠️  ${failure}`)
+    if (concurrent > 1) {
+        // Parallel execution with batching
+        for (let i = 0; i < suite.tests.length; i += concurrent) {
+            const batch = suite.tests.slice(i, i + concurrent)
+            const batchPromises = batch.map(test => runTest(baseUrl, tenantId, suite.id, test, verbose))
+            const batchResults = await Promise.all(batchPromises)
+            
+            for (let j = 0; j < batchResults.length; j++) {
+                const result = batchResults[j]
+                const test = batch[j]
+                results.push(result)
+                totalLatency += result.latencyMs
+                
+                if (result.passed) {
+                    passed++
+                    console.log(`   ${test.id}: ✅ (${result.latencyMs}ms) → ${result.routing.selectedAgent || 'base'}`)
+                } else {
+                    failed++
+                    console.log(`   ${test.id}: ❌ (${result.latencyMs}ms)`)
+                    for (const failure of result.failures) {
+                        console.log(`      ⚠️  ${failure}`)
+                    }
+                    if (verbose && result.response) {
+                        console.log(`      📝 Response: "${truncate(result.response, 100)}"`)
+                    }
+                }
             }
-            if (verbose && result.response) {
-                console.log(`      📝 Response: "${truncate(result.response, 100)}"`)
+            
+            // Small delay between batches
+            if (i + concurrent < suite.tests.length) {
+                await sleep(CONFIG.delayBetweenTests)
             }
         }
-        
-        await sleep(CONFIG.delayBetweenTests)
+    } else {
+        // Sequential execution (original behavior)
+        for (const test of suite.tests) {
+            process.stdout.write(`   ${test.id}: `)
+            
+            const result = await runTest(baseUrl, tenantId, suite.id, test, verbose)
+            results.push(result)
+            totalLatency += result.latencyMs
+            
+            if (result.passed) {
+                passed++
+                console.log(`✅ (${result.latencyMs}ms) → ${result.routing.selectedAgent || 'base'}`)
+            } else {
+                failed++
+                console.log(`❌ (${result.latencyMs}ms)`)
+                for (const failure of result.failures) {
+                    console.log(`      ⚠️  ${failure}`)
+                }
+                if (verbose && result.response) {
+                    console.log(`      📝 Response: "${truncate(result.response, 100)}"`)
+                }
+            }
+            
+            await sleep(CONFIG.delayBetweenTests)
+        }
     }
     
     return {
@@ -399,6 +440,9 @@ async function main() {
     console.log(`\n🧪 TUQUI AGENTS E2E TEST RUNNER`)
     console.log(`${'═'.repeat(60)}`)
     console.log(`🌐 Environment: ${args.env} (${baseUrl})`)
+    if (args.concurrent > 1) {
+        console.log(`⚡ Concurrent mode: ${args.concurrent} tests per batch`)
+    }
     
     // Load test suite
     const suitePath = path.join(__dirname, 'cedent-test-suite.json')
@@ -422,12 +466,12 @@ async function main() {
     }
     
     if (args.subset === 'critical') {
-        // Run only first test of each suite for quick CI check
+        // Run only tests marked as critical: true
         suites = suites.map(s => ({
             ...s,
-            tests: s.tests.slice(0, 1)
-        }))
-        console.log(`⚡ Critical subset: 1 test per suite`)
+            tests: s.tests.filter(t => t.critical === true)
+        })).filter(s => s.tests.length > 0)
+        console.log(`⚡ Critical subset: only tests with critical: true`)
     }
     
     const totalTests = suites.reduce((acc, s) => acc + s.tests.length, 0)
@@ -437,7 +481,7 @@ async function main() {
     const results: SuiteResult[] = []
     
     for (const suite of suites) {
-        const result = await runSuite(baseUrl, tenantId, suite, args.verbose)
+        const result = await runSuite(baseUrl, tenantId, suite, args.verbose, args.concurrent)
         results.push(result)
         await sleep(CONFIG.delayBetweenSuites)
     }
