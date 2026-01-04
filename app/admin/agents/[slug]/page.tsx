@@ -127,7 +127,8 @@ export default async function AgentEditorPage({ params }: { params: Promise<{ sl
 
     const AVAILABLE_TOOLS = [
         { slug: 'tavily', label: 'Navegador Web', description: 'Buscar información actualizada en internet' },
-        { slug: 'firecrawl', label: 'Investigador Web', description: 'Extraer contenido de páginas específicas (artículos, precios, docs)' },
+        { slug: 'firecrawl', label: 'Investigador Web', description: 'Extraer contenido de páginas específicas (artículos, docs)' },
+        { slug: 'ecommerce', label: 'Investigador Ecommerce', description: 'Buscar precios en MercadoLibre y Amazon' },
         { slug: 'odoo', label: 'Odoo ERP', description: 'Consultar ventas, contactos, productos del ERP' }
     ]
 

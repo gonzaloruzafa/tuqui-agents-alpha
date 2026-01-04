@@ -33,27 +33,28 @@ const TOOLS: ToolConfig[] = [
         ]
     },
     {
-        slug: 'firecrawl',
-        name: 'Investigador Web',
-        icon: 'Globe',
-        description: 'Extrae y analiza contenido de páginas web específicas.',
-        configFields: [],
-        envNote: 'La API Key se configura via variable de entorno FIRECRAWL_API_KEY'
-    },
-    {
         slug: 'tavily',
         name: 'Navegador Web',
         icon: 'Globe',
-        description: 'Búsqueda web en tiempo real con IA.',
+        description: 'Búsqueda web en tiempo real con IA (Tavily).',
         configFields: [],
         envNote: 'La API Key se configura via variable de entorno TAVILY_API_KEY'
     },
     {
-        slug: 'mercadolibre',
-        name: 'MercadoLibre',
+        slug: 'firecrawl',
+        name: 'Investigador Web',
+        icon: 'Globe',
+        description: 'Extrae contenido de páginas web específicas (artículos, docs).',
+        configFields: [],
+        envNote: 'La API Key se configura via variable de entorno FIRECRAWL_API_KEY'
+    },
+    {
+        slug: 'ecommerce_search',
+        name: 'Investigador Ecommerce',
         icon: 'ShoppingBag',
-        description: 'Búsqueda de productos, precios y análisis de competencia.',
-        configFields: []
+        description: 'Búsqueda de productos y precios REALES en MercadoLibre y Amazon.',
+        configFields: [],
+        envNote: 'Usa Tavily + Firecrawl stealth para extraer precios'
     },
     {
         slug: 'whatsapp',
