@@ -34,7 +34,9 @@ const SPECIALTY_KEYWORDS: Record<string, string[]> = {
     'mercado': [
         'mercadolibre', 'meli', 'publicacion', 'publicaciones',
         'precio de', 'precios de', 'buscar producto', 'cuanto cuesta',
-        'cuanto sale', 'comparar precio', 'marketplace', 'mercado libre'
+        'cuanto sale', 'comparar precio', 'comparar precios', 'comparar con',
+        'marketplace', 'mercado libre', 'competencia', 'precio mercado',
+        'precio de mercado', 'en mercado', 'de mercado'
     ],
     'legal': [
         'ley', 'leyes', 'legal', 'contrato', 'contratos',
@@ -59,6 +61,17 @@ const SPECIALTY_KEYWORDS: Record<string, string[]> = {
         'información actualizada', 'qué pasó con', 'últimas noticias'
     ]
 }
+
+// Patterns que indican intención de COMPARAR con mercado (cross-agent)
+const CROSS_AGENT_PATTERNS = [
+    /comparar.*(precio|precios).*(mercado|meli)/i,
+    /precio.*(mercado|meli|competencia)/i,
+    /(mercado|meli).*(precio|precios)/i,
+    /comparar.*(con|contra).*(mercado|meli)/i,
+    /cuanto.*(cuesta|sale|vale).*(mercado|meli)/i,
+    /sus precios.*(mercado|meli)/i,
+    /precios.*(sus|esos|estos).*(mercado|meli)/i
+]
 
 /**
  * Analiza el mensaje y retorna scores por especialidad
@@ -169,6 +182,14 @@ export async function routeMessage(
     const scores = analyzeMessage(fullContext)
 
     console.log('[Router] Message scores:', scores)
+
+    // 2.5 Detectar pattern cross-agent (comparar con mercado)
+    // Si el usuario quiere COMPARAR precios con MercadoLibre, priorizar MeLi
+    const isCrossAgentRequest = CROSS_AGENT_PATTERNS.some(pattern => pattern.test(message))
+    if (isCrossAgentRequest) {
+        console.log('[Router] Cross-agent pattern detected: prioritizing meli')
+        scores['mercado'] = (scores['mercado'] || 0) + 5  // Boost significativo
+    }
 
     // 3. Si no hay scores claros, usar agente principal (Tuqui)
     if (Object.keys(scores).length === 0) {
