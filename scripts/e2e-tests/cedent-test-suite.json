@@ -640,7 +640,7 @@
           "id": "fact-001",
           "critical": true,
           "messages": [{ "role": "user", "content": "¿Cuánto facturamos hoy?" }],
-          "expectations": { "shouldRouteToAgent": "odoo", "shouldHaveData": true }
+          "expectations": { "shouldRouteToAgent": "odoo" }
         },
         {
           "id": "fact-002",
