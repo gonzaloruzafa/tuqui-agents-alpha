@@ -47,6 +47,33 @@ function detectMarketplace(url: string): string | null {
 }
 
 /**
+ * Valida que una URL existe y responde (HEAD request)
+ * Timeout corto para no bloquear demasiado
+ */
+async function validateUrl(url: string): Promise<boolean> {
+    try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 3000) // 3s timeout
+        
+        const res = await fetch(url, {
+            method: 'HEAD',
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; TuquiBot/1.0)'
+            }
+        })
+        
+        clearTimeout(timeout)
+        
+        // Aceptamos 200-399 (incluye redirects)
+        return res.status >= 200 && res.status < 400
+    } catch (error) {
+        console.log(`[EcommerceSearch] URL validation failed for ${url}:`, (error as Error).message)
+        return false
+    }
+}
+
+/**
  * Extrae precios del contenido scrapeado
  */
 function extractPrices(content: string, marketplace: string): string[] {
@@ -258,8 +285,10 @@ Para Amazon, incluí "amazon" en la búsqueda.`,
         
         if (searchResult.error || searchResult.results.length === 0) {
             return {
-                error: searchResult.error || 'No se encontraron resultados',
-                products: []
+                success: false,
+                error: searchResult.error || 'No se encontraron resultados para esta búsqueda.',
+                products: [],
+                _instruction: 'NO inventes URLs. Decile al usuario que no encontraste resultados.'
             }
         }
 
@@ -276,17 +305,36 @@ Para Amazon, incluí "amazon" en la búsqueda.`,
             url: string
             price: string | null
             prices: string[]
+            verified: boolean
         }> = []
 
         for (const result of urlsToScrape) {
+            // Validar que la URL existe antes de scrapear
+            const isValidUrl = await validateUrl(result.url)
+            if (!isValidUrl) {
+                console.log(`[EcommerceSearch] Skipping invalid URL: ${result.url}`)
+                continue
+            }
+            
             const scraped = await scrapeEcommerceUrl(result.url)
             
             products.push({
                 title: scraped.title || result.title,
                 url: result.url,
                 price: scraped.prices[0] || null,
-                prices: scraped.prices
+                prices: scraped.prices,
+                verified: true
             })
+        }
+
+        // Si no hay productos válidos después de verificación
+        if (products.length === 0) {
+            return {
+                success: false,
+                error: 'No se pudieron verificar los resultados de búsqueda.',
+                products: [],
+                _instruction: 'NO inventes URLs. Decile al usuario que hubo un problema verificando los resultados.'
+            }
         }
 
         // Filtrar productos sin precio si hay algunos con precio
@@ -294,11 +342,13 @@ Para Amazon, incluí "amazon" en la búsqueda.`,
         const finalProducts = productsWithPrices.length > 0 ? productsWithPrices : products
 
         return {
+            success: true,
             query,
             marketplace,
             products: finalProducts,
             summary: searchResult.answer,
-            totalFound: searchResult.results.length
+            totalFound: finalProducts.length,
+            _instruction: 'SOLO mostrá las URLs de products[].url. NUNCA inventes links. Todos los links fueron verificados.'
         }
     }
 } as any)

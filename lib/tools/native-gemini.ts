@@ -5,7 +5,7 @@ import { GoogleGenerativeAI, Content, FunctionDeclaration, SchemaType } from '@g
  * Fixes "parameters schema should be of type OBJECT" error in AI SDK
  */
 export async function generateTextNative({
-    model: modelName = 'gemini-2.0-flash',
+    model: modelName = 'gemini-3-flash',
     system,
     messages,
     tools,

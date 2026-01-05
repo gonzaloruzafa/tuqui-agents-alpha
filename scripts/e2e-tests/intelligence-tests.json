@@ -1,0 +1,295 @@
+{
+  "version": "2.0.0",
+  "description": "High-intelligence test suite for Tuqui - Focus on cash, sales, ops with actionable responses",
+  "tenantId": "de7ef34a-12bd-4fe9-9d02-3d876a9393c2",
+  "suites": [
+    {
+      "id": "cash-collections",
+      "name": "Cobranzas - Deuda y Seguimiento",
+      "category": "odoo",
+      "tests": [
+        {
+          "id": "cash-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Top 10 clientes por deuda vencida, con monto y días promedio de atraso" }],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldHaveData": true, "shouldNotContain": ["| ---"] }
+        },
+        {
+          "id": "cash-002",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Cuánto vence esta semana y cuánto la próxima? Dame los montos por día" }],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldHaveData": true }
+        },
+        {
+          "id": "cash-003",
+          "messages": [{ "role": "user", "content": "¿Qué facturas están trabadas por nota de crédito pendiente?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "cash-004",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Qué clientes siempre pagan tarde? Dame patrón de los últimos 6 meses" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        }
+      ]
+    },
+    {
+      "id": "cash-chains",
+      "name": "Cobranzas - Cadenas Conversacionales",
+      "category": "conversation",
+      "tests": [
+        {
+          "id": "cash-chain-001",
+          "critical": true,
+          "messages": [
+            { "role": "user", "content": "Top 5 clientes por deuda vencida hoy" },
+            { "role": "assistant", "content": "Los 5 clientes con mayor deuda vencida son:\n1. Ministerio de Salud: $45.230.000 (89 días promedio)\n2. Polyquímica: $23.100.000 (45 días)\n3. Megadental SA: $18.500.000 (32 días)\n4. Universidad de Buenos Aires: $12.800.000 (67 días)\n5. Acryl-ar SRL: $9.200.000 (28 días)" },
+            { "role": "user", "content": "Para el primero, listame sus facturas vencidas y sugerime un mensaje de cobranza" }
+          ],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldUseContext": true, "shouldContain": ["Ministerio"] }
+        },
+        {
+          "id": "cash-chain-002",
+          "messages": [
+            { "role": "user", "content": "¿Cuánto cobramos ayer?" },
+            { "role": "assistant", "content": "Ayer cobramos $8.500.000 en 12 pagos recibidos." },
+            { "role": "user", "content": "¿Qué facturas impactaron?" }
+          ],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldUseContext": true }
+        }
+      ]
+    },
+    {
+      "id": "sales-pipeline",
+      "name": "Ventas - Pipeline y Forecast",
+      "category": "odoo",
+      "tests": [
+        {
+          "id": "sales-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Qué oportunidades están maduras pero sin próxima acción programada?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "sales-002",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Cuál es mi forecast realista vs optimista para este mes?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "sales-003",
+          "messages": [{ "role": "user", "content": "¿Qué presupuestos están por morir? (sin actividad hace más de 7 días)" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "sales-004",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Qué perdimos este mes y por qué? Dame patrones" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        }
+      ]
+    },
+    {
+      "id": "sales-actions",
+      "name": "Ventas - Acciones y Follow-up",
+      "category": "odoo",
+      "tests": [
+        {
+          "id": "sales-action-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Qué 10 oportunidades debería empujar hoy para cumplir la meta del mes?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "sales-action-002",
+          "messages": [{ "role": "user", "content": "¿Qué clientes compraron sillones y deberían comprar compresores? (cross-sell)" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "sales-action-003",
+          "messages": [{ "role": "user", "content": "Armame un follow-up para Polyquímica con contexto de su última compra y deuda" }],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldContain": ["Polyquímica"] }
+        }
+      ]
+    },
+    {
+      "id": "sales-chains",
+      "name": "Ventas - Cadenas Conversacionales",
+      "category": "conversation",
+      "tests": [
+        {
+          "id": "sales-chain-001",
+          "critical": true,
+          "messages": [
+            { "role": "user", "content": "Dame los presupuestos sin respuesta hace más de 7 días" },
+            { "role": "assistant", "content": "Hay 15 presupuestos sin respuesta:\n1. Clínica San Martín - $8.500.000 (12 días)\n2. Centro Odontológico Sur - $5.200.000 (9 días)\n3. Dr. García - $3.100.000 (8 días)..." },
+            { "role": "user", "content": "Para los 3 primeros, generame mensajes de seguimiento personalizados" }
+          ],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldUseContext": true }
+        }
+      ]
+    },
+    {
+      "id": "ops-stock",
+      "name": "Operaciones - Stock y Entregas",
+      "category": "odoo",
+      "tests": [
+        {
+          "id": "ops-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Qué pedidos están atrasados y cuál es la causa raíz?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "ops-002",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Qué productos van a stockout en los próximos 7 días según consumo reciente?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "ops-003",
+          "messages": [{ "role": "user", "content": "¿Qué backorders están por romper promesas con clientes top?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "ops-004",
+          "messages": [{ "role": "user", "content": "¿Qué entregas están frenando facturación?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        }
+      ]
+    },
+    {
+      "id": "ops-chains",
+      "name": "Operaciones - Cadenas Conversacionales",
+      "category": "conversation",
+      "tests": [
+        {
+          "id": "ops-chain-001",
+          "critical": true,
+          "messages": [
+            { "role": "user", "content": "¿Qué pedidos no puedo entregar por falta de stock?" },
+            { "role": "assistant", "content": "Hay 8 pedidos bloqueados por stock:\n1. SO-2025-1234 (Megadental) - Falta compresor 1.6HP (3 unidades)\n2. SO-2025-1256 (Polyquímica) - Falta radiovisiografo (1 unidad)..." },
+            { "role": "user", "content": "Para el compresor, ¿qué opciones tengo? ¿Proveedor alternativo o transferencia?" }
+          ],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldUseContext": true, "shouldContain": ["compresor"] }
+        }
+      ]
+    },
+    {
+      "id": "ceo-brief",
+      "name": "CEO - Resumen Ejecutivo",
+      "category": "odoo",
+      "tests": [
+        {
+          "id": "ceo-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Dame un resumen de 60 segundos: ventas, cobranzas, atrasos, stock crítico. Solo lo importante." }],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldHaveData": true }
+        },
+        {
+          "id": "ceo-002",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Cómo viene la caja proyectada a 14 días si cobramos como venimos cobrando?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "ceo-003",
+          "messages": [{ "role": "user", "content": "¿Qué 20 facturas explican el 80% de la deuda vencida? (Pareto)" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "ceo-004",
+          "messages": [{ "role": "user", "content": "¿Qué clientes bajaron compras vs su promedio y cuánto estoy perdiendo?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        }
+      ]
+    },
+    {
+      "id": "margins-pricing",
+      "name": "Márgenes y Precios",
+      "category": "odoo",
+      "tests": [
+        {
+          "id": "margin-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Qué productos están destruyendo margen vs el mes pasado?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "margin-002",
+          "messages": [{ "role": "user", "content": "¿Qué descuentos estamos dando y cómo pegan en margen?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "margin-003",
+          "messages": [{ "role": "user", "content": "¿Cuál es el ticket promedio por vendedor este mes vs el anterior?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        }
+      ]
+    },
+    {
+      "id": "meli-validation",
+      "name": "MercadoLibre - Validación URLs",
+      "category": "meli",
+      "tests": [
+        {
+          "id": "meli-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Buscame el precio de un sillón odontológico en MercadoLibre" }],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldNotContain": ["MLA-123456"] }
+        },
+        {
+          "id": "meli-002",
+          "messages": [{ "role": "user", "content": "¿Cuánto cuesta un compresor dental en el mercado?" }],
+          "expectations": { "shouldRouteToAgent": "meli" }
+        },
+        {
+          "id": "meli-003",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Buscame un producto que seguro no existe: XYZABC123456789" }],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldContain": ["no encontr"] }
+        }
+      ]
+    },
+    {
+      "id": "cross-module",
+      "name": "Consultas Cross-Module",
+      "category": "cross",
+      "tests": [
+        {
+          "id": "cross-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Qué cuentas clave están en riesgo? (baja actividad + pagos tardíos)" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        },
+        {
+          "id": "cross-002",
+          "messages": [{ "role": "user", "content": "Si hoy corto crédito a Polyquímica, ¿qué pedidos quedan bloqueados?" }],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldContain": ["Polyquímica"] }
+        },
+        {
+          "id": "cross-003",
+          "messages": [{ "role": "user", "content": "¿Qué clientes tienen ventas pero ningún pago en los últimos 90 días?" }],
+          "expectations": { "shouldRouteToAgent": "odoo" }
+        }
+      ]
+    },
+    {
+      "id": "format-validation",
+      "name": "Validación de Formato",
+      "category": "format",
+      "tests": [
+        {
+          "id": "format-001",
+          "messages": [{ "role": "user", "content": "Dame el top 5 de vendedores por ventas este mes" }],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldNotContain": ["| ---", "+---+"], "shouldHaveData": true }
+        },
+        {
+          "id": "format-002",
+          "messages": [{ "role": "user", "content": "¿Cuáles son las 3 facturas más grandes pendientes de cobro?" }],
+          "expectations": { "shouldRouteToAgent": "odoo", "shouldNotContain": ["| ---"], "shouldHaveData": true }
+        }
+      ]
+    }
+  ]
+}
