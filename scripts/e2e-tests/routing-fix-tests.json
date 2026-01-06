@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "description": "Tests de routing fixes específicos",
+  "tenantId": "de7ef34a-12bd-4fe9-9d02-3d876a9393c2",
+  "suites": [
+    {
+      "id": "routing-fixes",
+      "name": "Routing Fixes Validation",
+      "category": "meli",
+      "tests": [
+        {
+          "id": "fix-001",
+          "messages": [{ "role": "user", "content": "Autoclave Woson 12L: ¿$1.350.000 es buen precio o estoy regalando?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 60000 }
+        },
+        {
+          "id": "fix-002",
+          "messages": [{ "role": "user", "content": "Nuestro precio de microscopio dental es $2.800.000. ¿Debería subir, bajar, o mantener?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 60000 }
+        }
+      ]
+    }
+  ]
+}
