@@ -5,7 +5,7 @@ import { GoogleGenerativeAI, Content, FunctionDeclaration, SchemaType } from '@g
  * Fixes "parameters schema should be of type OBJECT" error in AI SDK
  */
 export async function generateTextNative({
-    model: modelName = 'gemini-3-flash',
+    model: modelName = 'gemini-3-flash-preview',
     system,
     messages,
     tools,
@@ -111,16 +111,34 @@ export async function generateTextNative({
         }
     })
 
-    let result = await chat.sendMessage(lastMessage)
-    let response = result.response
-    let totalTokens = response.usageMetadata?.totalTokenCount || 0
+    let result: any
+    let response: any
+    let totalTokens = 0
+    
+    try {
+        result = await chat.sendMessage(lastMessage)
+        response = result.response
+        totalTokens = response.usageMetadata?.totalTokenCount || 0
+    } catch (error: any) {
+        console.error('[NativeGemini] Initial sendMessage error:', error)
+        
+        // Mensajes amigables según el tipo de error
+        if (error.status === 404 || error.message?.includes('not found')) {
+            throw new Error('El modelo de IA no está disponible momentáneamente. Intentá de nuevo.')
+        } else if (error.status === 429 || error.message?.includes('quota') || error.message?.includes('rate')) {
+            throw new Error('Demasiadas consultas. Esperá unos segundos e intentá de nuevo.')
+        } else if (error.status === 503 || error.message?.includes('overloaded')) {
+            throw new Error('El servicio de IA está sobrecargado. Intentá en unos minutos.')
+        }
+        throw error // Re-throw otros errores
+    }
 
     // Manual Tool Loop (maxSteps)
     for (let i = 0; i < maxSteps; i++) {
         const parts = response.candidates?.[0]?.content?.parts || []
         
         // Find ALL function calls in this response (Gemini may call multiple tools at once)
-        const functionCalls = parts.filter(p => 'functionCall' in p) as any[]
+        const functionCalls = parts.filter((p: any) => 'functionCall' in p) as any[]
 
         if (functionCalls.length === 0) break
 

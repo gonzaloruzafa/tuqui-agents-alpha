@@ -37,7 +37,7 @@ GENERA un contexto en formato de instrucción para el agente, comenzando con "El
 
     try {
         const { text } = await generateText({
-            model: google('gemini-3-flash'),
+            model: google('gemini-3-flash-preview'),
             prompt,
         })
 

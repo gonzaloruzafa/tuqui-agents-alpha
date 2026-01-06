@@ -178,7 +178,7 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
             } else {
                 // No tools - use AI SDK (simpler, works fine without tools)
                 const result = await generateText({
-                    model: google('gemini-3-flash'),
+                    model: google('gemini-3-flash-preview'),
                     system: systemPrompt,
                     messages: messages as any
                 } as any)
