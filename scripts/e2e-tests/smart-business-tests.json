@@ -1,0 +1,65 @@
+{
+  "version": "1.0.0",
+  "description": "Tests inteligentes de business scenarios: CEO questions, pricing decisions, multi-turn analysis, edge cases",
+  "tenantId": "de7ef34a-12bd-4fe9-9d02-3d876a9393c2",
+  "suites": [
+    {
+      "id": "ceo-dashboard",
+      "name": "Preguntas de CEO/Gerente",
+      "category": "business",
+      "tests": [
+        {"id": "ceo-001", "critical": true, "messages": [{"role": "user", "content": "¿Cómo viene el negocio este mes?"}], "expectations": {"shouldRouteToAgent": "odoo", "shouldHaveData": true}},
+        {"id": "ceo-002", "critical": true, "messages": [{"role": "user", "content": "¿Vendimos más o menos que el mes pasado?"}], "expectations": {"shouldRouteToAgent": "odoo", "shouldHaveData": true}},
+        {"id": "ceo-003", "critical": true, "messages": [{"role": "user", "content": "¿Hay algo que me debería preocupar en las ventas?"}], "expectations": {"shouldRouteToAgent": "odoo"}},
+        {"id": "ceo-004", "messages": [{"role": "user", "content": "¿Quiénes son mis mejores clientes este trimestre?"}], "expectations": {"shouldRouteToAgent": "odoo", "shouldHaveData": true}},
+        {"id": "ceo-005", "critical": true, "messages": [{"role": "user", "content": "¿Qué vendedor está performando mejor?"}], "expectations": {"shouldRouteToAgent": "odoo", "shouldHaveData": true}}
+      ]
+    },
+    {
+      "id": "pricing-intelligence",
+      "name": "Inteligencia de Pricing",
+      "category": "meli",
+      "tests": [
+        {"id": "price-001", "critical": true, "messages": [{"role": "user", "content": "Mi sillón odontológico está a $3.200.000, ¿estoy caro o barato?"}], "expectations": {"shouldRouteToAgent": "meli"}},
+        {"id": "price-002", "critical": true, "messages": [{"role": "user", "content": "El compresor dental lo vendo a $700.000. ¿Puedo subirlo a $850.000 sin perder competitividad?"}], "expectations": {"shouldRouteToAgent": "meli"}},
+        {"id": "price-003", "critical": true, "messages": [{"role": "user", "content": "El autoclave 12L lo tengo a $1.100.000. ¿Lo estoy regalando?"}], "expectations": {"shouldRouteToAgent": "meli"}},
+        {"id": "price-004", "messages": [{"role": "user", "content": "¿A cuánto venden los autoclaves marca Woson en MercadoLibre?"}], "expectations": {"shouldRouteToAgent": "meli"}},
+        {"id": "price-005", "critical": true, "messages": [{"role": "user", "content": "La turbina dental la tengo a $350.000. ¿Debería subir, bajar, o mantener?"}], "expectations": {"shouldRouteToAgent": "meli"}}
+      ]
+    },
+    {
+      "id": "cross-analysis-advanced",
+      "name": "Análisis Cruzado Avanzado",
+      "category": "cross-analysis",
+      "tests": [
+        {"id": "cross-001", "critical": true, "messages": [{"role": "user", "content": "¿Cuál es mi producto más vendido?"}, {"role": "assistant", "content": "Tu producto más vendido es el Sillón Odontológico Gnatus G3 con 12 unidades este mes."}, {"role": "user", "content": "Buscame ese sillón en MeLi y decime si estamos bien de precio"}], "expectations": {"shouldRouteToAgent": "meli", "shouldUseContext": true}},
+        {"id": "cross-002", "critical": true, "messages": [{"role": "user", "content": "¿Qué productos tengo con más de 60 días de stock?"}, {"role": "assistant", "content": "Productos con sobrestock: Compresor 1HP (40 unidades), Lámpara Fotocurado LED (25 unidades)"}, {"role": "user", "content": "El compresor tiene mucho stock. ¿A cuánto podría liquidarlo para moverlo rápido?"}], "expectations": {"shouldRouteToAgent": "meli", "shouldUseContext": true}},
+        {"id": "cross-003", "critical": true, "messages": [{"role": "user", "content": "¿Qué productos me dan menos margen?"}, {"role": "assistant", "content": "Productos con menor margen: Turbina Alta Velocidad (8%), Pieza de Mano (10%)"}, {"role": "user", "content": "La turbina tiene 8% nomás. ¿Puedo subirla o el mercado no me deja?"}], "expectations": {"shouldRouteToAgent": "meli", "shouldUseContext": true}}
+      ]
+    },
+    {
+      "id": "operational-queries",
+      "name": "Consultas Operativas",
+      "category": "odoo",
+      "tests": [
+        {"id": "ops-001", "critical": true, "messages": [{"role": "user", "content": "¿Qué vendimos hoy?"}], "expectations": {"shouldRouteToAgent": "odoo"}},
+        {"id": "ops-002", "messages": [{"role": "user", "content": "¿Qué entregas tenemos pendientes para esta semana?"}], "expectations": {"shouldRouteToAgent": "odoo"}},
+        {"id": "ops-003", "critical": true, "messages": [{"role": "user", "content": "¿Cuáles son las facturas vencidas que tenemos?"}], "expectations": {"shouldRouteToAgent": "odoo"}},
+        {"id": "ops-004", "messages": [{"role": "user", "content": "¿Qué productos tienen stock menor a 5 unidades?"}], "expectations": {"shouldRouteToAgent": "odoo"}},
+        {"id": "ops-006", "critical": true, "messages": [{"role": "user", "content": "¿Cuánto nos compró Polyquímica este año?"}], "expectations": {"shouldRouteToAgent": "odoo"}}
+      ]
+    },
+    {
+      "id": "competitive-analysis",
+      "name": "Análisis Competitivo",
+      "category": "meli",
+      "tests": [
+        {"id": "comp-001", "critical": true, "messages": [{"role": "user", "content": "¿Cómo están los precios de equipamiento odontológico en MercadoLibre?"}], "expectations": {"shouldRouteToAgent": "meli"}},
+        {"id": "comp-002", "messages": [{"role": "user", "content": "¿Qué marcas de sillones odontológicos hay en MeLi y a qué precios?"}], "expectations": {"shouldRouteToAgent": "meli"}},
+        {"id": "comp-003", "critical": true, "messages": [{"role": "user", "content": "¿Cuál es el autoclave más vendido en MercadoLibre?"}], "expectations": {"shouldRouteToAgent": "meli"}},
+        {"id": "comp-004", "messages": [{"role": "user", "content": "¿Cuál es el rango de precios de compresores dentales?"}], "expectations": {"shouldRouteToAgent": "meli", "shouldContain": ["$"]}},
+        {"id": "comp-006", "critical": true, "messages": [{"role": "user", "content": "Compará precios de autoclaves 12L, 18L y 23L en MercadoLibre"}], "expectations": {"shouldRouteToAgent": "meli"}}
+      ]
+    }
+  ]
+}
