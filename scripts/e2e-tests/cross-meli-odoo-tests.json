@@ -1,0 +1,215 @@
+{
+  "version": "1.0.0",
+  "description": "Tests cruzados Odoo+MeLi - Análisis de precios, competitividad, y decisiones de pricing basadas en datos reales",
+  "tenantId": "de7ef34a-12bd-4fe9-9d02-3d876a9393c2",
+  "suites": [
+    {
+      "id": "cross-odoo-meli-ventas",
+      "name": "Ventas Odoo → Validación MeLi",
+      "category": "cross-analysis",
+      "tests": [
+        {
+          "id": "cross-vm-001",
+          "critical": true,
+          "messages": [
+            { "role": "user", "content": "¿Cuál es mi producto más vendido este mes?" },
+            { "role": "assistant", "content": "Tu producto más vendido este mes es el Sillón Odontológico Gnatus G3 con 15 unidades vendidas por un total de $45M." },
+            { "role": "user", "content": "Buscame ese sillón en MercadoLibre a ver si estamos bien de precio" }
+          ],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldUseContext": true, "timeout": 90000 }
+        },
+        {
+          "id": "cross-vm-002",
+          "critical": true,
+          "messages": [
+            { "role": "user", "content": "¿Qué productos tengo con más de 90 días de stock?" },
+            { "role": "assistant", "content": "Productos con sobrestock: Compresor Dental 1HP (45 unidades), Lámpara LED (30 unidades), Autoclave 8L (25 unidades)" },
+            { "role": "user", "content": "Fijate en MeLi si el compresor 1HP está barato y puedo hacer promo competitiva" }
+          ],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldUseContext": true, "timeout": 90000 }
+        },
+        {
+          "id": "cross-vm-003",
+          "critical": true,
+          "messages": [
+            { "role": "user", "content": "¿Qué productos me dan menos margen porcentual?" },
+            { "role": "assistant", "content": "Productos con menor margen: Turbina Dental Alta Velocidad (8%), Pieza de Mano Baja Velocidad (10%), Fresas de Carburo (12%)" },
+            { "role": "user", "content": "La turbina tiene 8% nomás... ¿a cuánto se venden las turbinas dentales en el mercado?" }
+          ],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldUseContext": true, "timeout": 90000 }
+        },
+        {
+          "id": "cross-vm-004",
+          "messages": [
+            { "role": "user", "content": "¿Cuáles son mis 3 productos estrella por rentabilidad?" },
+            { "role": "assistant", "content": "Tus productos estrella: Autoclave Woson 18L (45% margen), Radiovisiografo Digital (40%), Unidad Dental Completa (35%)" },
+            { "role": "user", "content": "¿Cómo están los precios de autoclaves 18L en MercadoLibre?" }
+          ],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldUseContext": true, "timeout": 90000 }
+        },
+        {
+          "id": "cross-vm-005",
+          "critical": true,
+          "messages": [
+            { "role": "user", "content": "¿Qué categoría de producto bajó más vs mes pasado?" },
+            { "role": "assistant", "content": "La categoría que más bajó es Equipamiento Menor: ultrasonidos, lámparas de fotocurado, amalgamadores (-51%)" },
+            { "role": "user", "content": "Chequeame precios de ultrasonidos dentales en MeLi, capaz estoy caro" }
+          ],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldUseContext": true, "timeout": 90000 }
+        }
+      ]
+    },
+    {
+      "id": "meli-pricing-decision",
+      "name": "MeLi → Decisión de Pricing",
+      "category": "meli",
+      "tests": [
+        {
+          "id": "meli-pd-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Mi sillón Gnatus está a $3.200.000, ¿estoy caro comparado con MercadoLibre?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        },
+        {
+          "id": "meli-pd-002",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Quiero subir el compresor de $700.000 a $800.000. ¿Hay espacio en el mercado o me paso?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        },
+        {
+          "id": "meli-pd-003",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Autoclave Woson 12L: ¿$1.350.000 es buen precio o estoy regalando?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        },
+        {
+          "id": "meli-pd-004",
+          "messages": [{ "role": "user", "content": "Dame el rango completo de precios de turbinas dentales de alta velocidad en MeLi" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        },
+        {
+          "id": "meli-pd-005",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Comparame los precios en MeLi de: lámpara de fotocurado, ultrasonido dental, y amalgamador" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 120000 }
+        }
+      ]
+    },
+    {
+      "id": "cross-odoo-meli-competencia",
+      "name": "Análisis Competitivo Completo",
+      "category": "cross-analysis",
+      "tests": [
+        {
+          "id": "cross-comp-001",
+          "critical": true,
+          "messages": [
+            { "role": "user", "content": "Dame mis 5 productos más vendidos con su precio de venta" },
+            { "role": "assistant", "content": "Tus 5 productos top: Sillón Gnatus G3 ($3.000.000), Compresor 1.5HP ($750.000), Autoclave Woson 12L ($1.200.000), Turbina Alta Velocidad ($280.000), Lámpara Fotocurado ($350.000)" },
+            { "role": "user", "content": "Ahora buscame cada uno de esos en MeLi y decime cuáles están caros vs el mercado" }
+          ],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldUseContext": true, "timeout": 180000 }
+        },
+        {
+          "id": "cross-comp-002",
+          "critical": true,
+          "messages": [
+            { "role": "user", "content": "¿Qué oportunidades perdimos por precio este mes?" },
+            { "role": "assistant", "content": "Oportunidades perdidas: Sillón Gnatus rechazado por Ministerio (nuestro: $3.2M, competencia: $2.8M), Compresor 2HP rechazado por Polyquímica" },
+            { "role": "user", "content": "El sillón Gnatus nos lo rechazaron por caro... ¿realmente está caro en el mercado o el competidor regaló?" }
+          ],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldUseContext": true, "timeout": 90000 }
+        },
+        {
+          "id": "cross-comp-003",
+          "messages": [
+            { "role": "user", "content": "¿Qué productos están por quedarse sin stock esta semana?" },
+            { "role": "assistant", "content": "Productos críticos: Radiovisiografo Digital (2 unidades), Pieza Mano Baja Velocidad (8 unidades)" },
+            { "role": "user", "content": "Si me quedo sin radiovisiografos, ¿a cuánto los puedo conseguir de urgencia en MeLi?" }
+          ],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldUseContext": true, "timeout": 90000 }
+        },
+        {
+          "id": "cross-comp-004",
+          "critical": true,
+          "messages": [
+            { "role": "user", "content": "Dame mis productos con margen mayor a 30%" },
+            { "role": "assistant", "content": "Productos con margen >30%: Autoclave Woson 18L (45% - $2.100.000), Radiovisiografo Digital (42%), Unidad Dental Completa (38%)" },
+            { "role": "user", "content": "El autoclave 18L tiene buen margen. Chequeame si en el mercado puedo subirlo más todavía" }
+          ],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldUseContext": true, "timeout": 90000 }
+        }
+      ]
+    },
+    {
+      "id": "meli-quality-responses",
+      "name": "Calidad de Respuestas MeLi",
+      "category": "meli",
+      "tests": [
+        {
+          "id": "meli-qr-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "¿Cuánto cuestan los sillones odontológicos en MercadoLibre?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldContain": ["$"], "shouldNotContain": ["MLA-"], "timeout": 90000 }
+        },
+        {
+          "id": "meli-qr-002",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Dame el rango de precios de compresores dentales" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        },
+        {
+          "id": "meli-qr-003",
+          "messages": [{ "role": "user", "content": "Buscame 5 opciones diferentes de autoclaves con sus precios" }],
+          "expectations": { "shouldRouteToAgent": "meli", "shouldContain": ["$"], "timeout": 90000 }
+        },
+        {
+          "id": "meli-qr-004",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Vendemos la turbina NSK a $350.000, ¿estamos en precio de mercado?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        },
+        {
+          "id": "meli-qr-005",
+          "messages": [{ "role": "user", "content": "Buscame el equipo odontológico marca XYZ modelo QWERTY123 en MeLi" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 60000 }
+        },
+        {
+          "id": "meli-qr-006",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "La lámpara de fotocurado la vendemos a $420.000. ¿Cómo estamos vs la competencia?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        }
+      ]
+    },
+    {
+      "id": "meli-actionable-intelligence",
+      "name": "Inteligencia Accionable MeLi",
+      "category": "meli",
+      "tests": [
+        {
+          "id": "meli-ai-001",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Nuestro precio de microscopio dental es $2.800.000. ¿Debería subir, bajar, o mantener?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        },
+        {
+          "id": "meli-ai-002",
+          "messages": [{ "role": "user", "content": "¿Hay algún producto odontológico que esté escaso en MeLi y podría vender más caro?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        },
+        {
+          "id": "meli-ai-003",
+          "critical": true,
+          "messages": [{ "role": "user", "content": "Quiero hacer una promo del compresor a $599.000. ¿Sería el más barato del mercado?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        },
+        {
+          "id": "meli-ai-004",
+          "messages": [{ "role": "user", "content": "¿Qué precios tiene la marca Gnatus en sillones odontológicos en MeLi?" }],
+          "expectations": { "shouldRouteToAgent": "meli", "timeout": 90000 }
+        }
+      ]
+    }
+  ]
+}
