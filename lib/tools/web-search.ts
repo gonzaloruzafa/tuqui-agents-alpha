@@ -17,9 +17,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
  * - No requiere stealth mode ni bypass de login walls
  */
 
-const TAVILY_API_KEY = process.env.TAVILY_API_KEY
-const GEMINI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-
 /**
  * Método 1: Tavily Search (búsqueda web rápida)
  */
@@ -31,6 +28,7 @@ async function searchWithTavily(
         site_filter?: string
     }
 ) {
+    const TAVILY_API_KEY = process.env.TAVILY_API_KEY
     if (!TAVILY_API_KEY) {
         console.error('[WebSearch/Tavily] TAVILY_API_KEY no configurada')
         return { error: 'TAVILY_API_KEY no configurada' }
@@ -96,6 +94,7 @@ async function searchWithGrounding(
         max_results?: number
     }
 ) {
+    const GEMINI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY
     if (!GEMINI_API_KEY) {
         console.error('[WebSearch/Grounding] GOOGLE_GENERATIVE_AI_API_KEY no configurada')
         return { error: 'GOOGLE_GENERATIVE_AI_API_KEY no configurada' }
@@ -149,9 +148,13 @@ IMPORTANTE:
 
         const response = result.response
         const text = response.text()
-        const groundingMetadata = (response as any).groundingMetadata
+        
+        // El metadata puede estar en el candidate o en el result directamente según la versión del SDK
+        const groundingMetadata = (response as any).groundingMetadata || 
+                                 (result as any).groundingMetadata ||
+                                 (response.candidates?.[0] as any)?.groundingMetadata;
 
-        console.log('[WebSearch/Grounding] Raw GroundingMetadata:', JSON.stringify(groundingMetadata, null, 2))
+        console.log('[WebSearch/Grounding] Raw GroundingMetadata keys:', groundingMetadata ? Object.keys(groundingMetadata) : 'none')
 
         // Extraer sources del metadata (Gemini 2.0 tiene un formato diferente)
         let sources = []
@@ -217,10 +220,10 @@ function isPriceQuery(query: string): boolean {
     const hasPriceKeyword = priceKeywords.some(kw => lowerQuery.includes(kw))
     const hasEcommerceKeyword = ecommerceKeywords.some(kw => lowerQuery.includes(kw))
 
-    // Si menciona precio + ecommerce, definitivamente es price query
-    if (hasPriceKeyword && hasEcommerceKeyword) return true
+    // Si menciona precio (aunque no diga meli), suele ser para buscarlo
+    if (hasPriceKeyword) return true
 
-    // Si solo menciona ecommerce y no son queries informativas, probablemente busca precios
+    // Si menciona ecommerce (meli, amazon, etc)
     if (hasEcommerceKeyword && !lowerQuery.includes('cómo') && !lowerQuery.includes('qué es')) {
         return true
     }
@@ -300,21 +303,41 @@ Ejemplos:
                 })
             ])
 
-            // Combinar: Usamos el answer de Grounding (es mejor comparando) 
-            // y combinamos las sources priorizando las de Tavily (suelen ser links más directos)
-            const combinedSources = [...(tavilyRes.sources || [])]
-            
-            // Agregar sources de grounding que no estén ya (mejor filtrar por URL base)
-            const groundingSources = (groundingRes.sources || []).filter((gs: any) => 
-                !combinedSources.some(ts => ts.url === gs.url)
-            )
-            combinedSources.push(...groundingSources)
+            // ESTRATEGIA ANTI-ALUCINACIÓN:
+            // 1. Usamos análisis de Grounding (mejor para comparar precios)
+            // 2. PERO: Reemplazamos los links de Grounding por los de Tavily
+            // 3. Tavily devuelve links directos a productos (/articulo) vs listados (/listado)
 
-            result = {
-                method: 'hybrid (grounding+tavily)',
-                answer: groundingRes.answer,
-                sources: combinedSources,
-                searchQueries: [...(groundingRes.searchQueries || []), ...(tavilyRes.searchQueries || [])]
+            const tavilySources = tavilyRes.sources || []
+            const groundingText = groundingRes.answer || ''
+
+            // Si Tavily encontró links, son los ÚNICOS que debe usar
+            if (tavilySources.length > 0) {
+                // Construir respuesta híbrida: análisis de Grounding + links MANDATORIOS de Tavily
+                const linksSection = tavilySources
+                    .map((s: any, i: number) => `[${i+1}] ${s.title}\n   URL: ${s.url}`)
+                    .join('\n\n')
+
+                const hybridAnswer = `${groundingText}
+
+━━━━━━━━━━━━━━━━━━━━━━
+🔗 LINKS VERIFICADOS (usar ESTOS únicamente):
+━━━━━━━━━━━━━━━━━━━━━━
+
+${linksSection}
+
+⚠️ IMPORTANTE: Los links arriba son los ÚNICOS correctos. No usar otros URLs.`
+
+                result = {
+                    method: 'hybrid (grounding+tavily)',
+                    answer: hybridAnswer,
+                    sources: tavilySources,  // SOLO Tavily sources (son los correctos)
+                    searchQueries: [...(groundingRes.searchQueries || []), ...(tavilyRes.searchQueries || [])]
+                }
+            } else {
+                // Fallback: Solo Grounding (si Tavily falló)
+                console.log('[WebSearch] Tavily returned no results, using Grounding only')
+                result = groundingRes
             }
         } else if (marketplace) {
             // Menciona ecommerce pero no es precio → Tavily con site filter

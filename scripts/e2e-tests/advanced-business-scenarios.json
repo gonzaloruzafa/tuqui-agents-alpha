@@ -1,0 +1,323 @@
+{
+  "name": "Advanced Business Scenarios - Real World Usage",
+  "description": "Tests complejos que reflejan cómo un CEO/CFO/Gerente realmente usa el agente en el día a día",
+  "categories": [
+    {
+      "category": "STRATEGIC",
+      "name": "Decisiones Estratégicas",
+      "tests": [
+        {
+          "id": "STRAT-01",
+          "question": "¿Cuáles son mis 3 clientes más importantes y cuánto me compraron este trimestre? ¿Alguno de ellos tiene deuda vencida?",
+          "expectedAgent": "odoo",
+          "assertions": {
+            "contains": ["$", "cliente"],
+            "minLength": 200,
+            "toolsUsed": ["odoo_intelligent_query"]
+          }
+        },
+        {
+          "id": "STRAT-02",
+          "question": "Quiero lanzar una promo de productos con bajo stock. Dame los 10 productos que están por quedarse sin stock y mostrá
+
+me sus precios en MercadoLibre para ver si puedo competir",
+          "expectedAgent": "tuqui",
+          "multiTool": true,
+          "assertions": {
+            "contains": ["stock", "$"],
+            "toolsUsed": ["odoo_intelligent_query", "web_search"]
+          }
+        },
+        {
+          "id": "STRAT-03",
+          "question": "¿Cuál fue mi producto más vendido del mes? Buscá su precio en MercadoLibre y decime si estoy caro o barato comparado con la competencia",
+          "expectedAgent": "tuqui",
+          "multiTool": true,
+          "assertions": {
+            "contains": ["$", "producto", "meli", "mercado"],
+            "toolsUsed": ["odoo_intelligent_query", "web_search"]
+          }
+        }
+      ]
+    },
+    {
+      "category": "CASHFLOW",
+      "name": "Gestión de Caja y Cobranzas",
+      "tests": [
+        {
+          "id": "CASH-ADV-01",
+          "question": "Dame un reporte de cash flow: cuánta plata tenemos en caja, cuánto nos deben los clientes, y qué facturas están vencidas hace más de 30 días",
+          "expectedAgent": "odoo",
+          "assertions": {
+            "contains": ["$", "caja", "cuentas por cobrar"],
+            "minLength": 300
+          }
+        },
+        {
+          "id": "CASH-ADV-02",
+          "conversational": true,
+          "steps": [
+            {
+              "question": "¿Cuánto nos debe el cliente que más nos debe?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["$"]
+              }
+            },
+            {
+              "question": "¿Cuánto nos compró en total históricamente?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["$"]
+              }
+            },
+            {
+              "question": "¿Tiene facturas vencidas?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["$", "vencida"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "category": "PRICING",
+      "name": "Estrategia de Precios",
+      "tests": [
+        {
+          "id": "PRICE-01",
+          "question": "Vendemos sillones odontológicos. ¿A cuánto están en MercadoLibre? Dame un rango de precios y decime si nuestro precio de lista es competitivo",
+          "expectedAgent": "tuqui",
+          "multiTool": true,
+          "assertions": {
+            "contains": ["$", "sillón", "rango"],
+            "toolsUsed": ["odoo_intelligent_query", "web_search"]
+          }
+        },
+        {
+          "id": "PRICE-02",
+          "conversational": true,
+          "steps": [
+            {
+              "question": "¿Cuál es el precio de venta promedio de nuestros productos este mes?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["$"]
+              }
+            },
+            {
+              "question": "Buscá precios de autoclaves 18 litros en MercadoLibre",
+              "expectedAgent": "meli",
+              "assertions": {
+                "contains": ["$", "autoclave"]
+              }
+            },
+            {
+              "question": "Comparando con esos precios, ¿estamos caros o baratos?",
+              "expectedAgent": "tuqui",
+              "assertions": {
+                "contains": ["$", "precio"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "category": "OPERATIONS",
+      "name": "Operaciones Diarias",
+      "tests": [
+        {
+          "id": "OPS-ADV-01",
+          "question": "¿Qué vendedores no vendieron nada esta semana? Dame un ranking completo de vendedores por monto vendido",
+          "expectedAgent": "odoo",
+          "assertions": {
+            "contains": ["vendedor", "$"],
+            "minLength": 200
+          }
+        },
+        {
+          "id": "OPS-ADV-02",
+          "conversational": true,
+          "steps": [
+            {
+              "question": "¿Cuántos pedidos de venta tenemos pendientes de entregar?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["pedido"]
+              }
+            },
+            {
+              "question": "¿Cuál es el más viejo?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["pedido", "fecha"]
+              }
+            },
+            {
+              "question": "¿Ese cliente tiene otros pedidos pendientes?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["cliente"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "category": "EXECUTIVE",
+      "name": "Dashboards Ejecutivos",
+      "tests": [
+        {
+          "id": "EXEC-01",
+          "question": "Dame un dashboard ejecutivo completo: ventas del mes, top 5 clientes, top 5 productos, deuda total por cobrar, y productos críticos de stock",
+          "expectedAgent": "odoo",
+          "assertions": {
+            "contains": ["$", "ventas", "cliente", "producto"],
+            "minLength": 500
+          }
+        },
+        {
+          "id": "EXEC-02",
+          "question": "¿Cómo va el mes comparado con el año pasado? Dame ventas, cantidad de pedidos, y ticket promedio de ambos períodos",
+          "expectedAgent": "odoo",
+          "assertions": {
+            "contains": ["$", "vs", "comparado"],
+            "minLength": 200
+          }
+        },
+        {
+          "id": "EXEC-03",
+          "conversational": true,
+          "steps": [
+            {
+              "question": "¿Cuánto facturamos este mes?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["$"]
+              }
+            },
+            {
+              "question": "¿Y el mes pasado?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["$"]
+              }
+            },
+            {
+              "question": "¿Cuál fue la diferencia porcentual?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["%", "diferencia"]
+              }
+            },
+            {
+              "question": "¿A qué se debe esa variación? Dame los productos que más crecieron o cayeron",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["producto", "$"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "category": "MIXED",
+      "name": "Escenarios Multi-Herramienta",
+      "tests": [
+        {
+          "id": "MIX-01",
+          "question": "Estoy pensando en comprar un compresor odontológico para stock. Buscame precios en MercadoLibre, y luego decime cuántos compresores vendimos el último trimestre y a qué precio promedio",
+          "expectedAgent": "tuqui",
+          "multiTool": true,
+          "assertions": {
+            "contains": ["$", "compresor", "mercado"],
+            "toolsUsed": ["web_search", "odoo_intelligent_query"]
+          }
+        },
+        {
+          "id": "MIX-02",
+          "question": "¿Qué productos NO vendimos nada este mes pero sí el mes pasado? Esos productos pueden estar perdiendo tracción, buscá sus precios en MercadoLibre para ver si la competencia nos está ganando",
+          "expectedAgent": "tuqui",
+          "multiTool": true,
+          "assertions": {
+            "contains": ["producto", "$"],
+            "toolsUsed": ["odoo_intelligent_query", "web_search"]
+          }
+        },
+        {
+          "id": "MIX-03",
+          "conversational": true,
+          "steps": [
+            {
+              "question": "¿Cuál es nuestro producto con mayor margen de ganancia?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["producto", "$"]
+              }
+            },
+            {
+              "question": "¿Cuánto vendimos de ese producto este trimestre?",
+              "expectedAgent": "odoo",
+              "assertions": {
+                "contains": ["$"]
+              }
+            },
+            {
+              "question": "Buscá ese producto en MercadoLibre y decime a cuánto lo venden",
+              "expectedAgent": "meli",
+              "assertions": {
+                "contains": ["$", "mercado"]
+              }
+            },
+            {
+              "question": "Si subo mi precio 15%, ¿sigo siendo competitivo vs MercadoLibre?",
+              "expectedAgent": "tuqui",
+              "assertions": {
+                "contains": ["$", "precio", "%"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "category": "EMERGENCY",
+      "name": "Situaciones Urgentes",
+      "tests": [
+        {
+          "id": "EMERG-01",
+          "question": "URGENTE: ¿Qué clientes tienen facturas vencidas de más de $500.000? Necesito llamarlos hoy",
+          "expectedAgent": "odoo",
+          "assertions": {
+            "contains": ["$", "cliente", "vencida"],
+            "minLength": 150
+          }
+        },
+        {
+          "id": "EMERG-02",
+          "question": "¿Qué productos están en negativo de stock o con menos de 5 unidades? Necesito reponerlos urgente",
+          "expectedAgent": "odoo",
+          "assertions": {
+            "contains": ["producto", "stock"],
+            "minLength": 100
+          }
+        },
+        {
+          "id": "EMERG-03",
+          "question": "Un cliente grande acaba de pedir 50 turbinas odontológicas y no sé si tengo stock. ¿Cuántas turbinas tengo disponibles? Si no tengo, buscá precios en MercadoLibre para comprar rápido",
+          "expectedAgent": "tuqui",
+          "multiTool": true,
+          "assertions": {
+            "contains": ["stock", "turbina"],
+            "toolsUsed": ["odoo_intelligent_query"]
+          }
+        }
+      ]
+    }
+  ]
+}

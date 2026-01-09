@@ -96,7 +96,23 @@ git push origin main
 - Fase 2 ($0 Format): +12.5% → 87.5% (14/16)
 - Fase 3 (Inventario): +6.3% → 93.8% (15/16)
 
-### Paso 2: Fix MELI-03 (Para llegar a 100%)
+### Paso 2: Fix MeLi Links Incorrectos 🔴 CRÍTICO
+**Test**: Todas las búsquedas de MeLi
+**Problema**: Links NO coinciden con los productos mostrados
+**Root Cause**:
+- Google Grounding devuelve links a `/listado` (páginas de categoría)
+- Necesitamos links directos a productos `/articulo/MLA-XXXXX`
+- El modelo LLM puede "inventar" URLs o mezclar links incorrectos
+
+**Solución Implementada** (web-search.ts líneas 306-341):
+- Estrategia híbrida: análisis de Grounding + links SOLO de Tavily
+- Tavily devuelve links directos a productos
+- Mensaje explícito: "⚠️ Los links arriba son los ÚNICOS correctos"
+- Previene alucinación de URLs por parte del LLM
+
+**Validación**: Ver [scripts/validate-meli-fix.md](scripts/validate-meli-fix.md)
+
+### Paso 3: Fix MELI-03 Routing (Para llegar a 100%)
 **Test**: "busca precios de compresor odontológico silencioso"
 **Problema**: Rutea a 'odoo' en vez de 'meli'
 **Solución**: Agregar "busca precio" + "busca precios" a MELI_OVERRIDE_KEYWORDS
