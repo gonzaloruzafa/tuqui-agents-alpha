@@ -35,6 +35,7 @@ import {
     InsightContext
 } from './odoo/insights'
 import { getMetricsPromptSnippet } from '../odoo/metrics-dictionary'
+import { PreSendValidator } from '../validation/pre-send-validator'
 
 // ============================================
 // TYPES
@@ -763,23 +764,84 @@ Ejecuta la consulta y responde al usuario.`
             responseForModel.insights_text = formatInsightsAsText(toolResult.insights)
         }
 
-        // Send function response back and stream the response
-        const streamResult = await chat.sendMessageStream([{
+        // ============================================
+        // VALIDATION: Buffer response and validate before streaming
+        // ============================================
+        console.log('[OdooBIAgent] Generating response for validation...')
+
+        // Send function response and get complete response (non-streaming)
+        const validationResult = await chat.sendMessage([{
             functionResponse: {
                 name,
                 response: responseForModel
             }
         }])
 
-        // Stream chunks as they arrive
-        for await (const chunk of streamResult.stream) {
-            const text = chunk.text()
-            if (text) yield text
+        const candidateText = validationResult.response.text()
+        console.log('[OdooBIAgent] Response length:', candidateText.length)
+
+        // Validate with PreSendValidator
+        const validation = PreSendValidator.validate(
+            candidateText,
+            [toolResult],
+            { userQuery: userMessage }
+        )
+
+        console.log('[OdooBIAgent] Validation:', JSON.stringify({
+            approved: validation.approved,
+            confidence: validation.confidence,
+            issuesCount: validation.issues.length
+        }))
+
+        if (!validation.approved) {
+            console.warn('[OdooBIAgent] Response rejected by validator:', validation.issues)
+
+            // Build correction prompt with specific issues
+            const issuesText = validation.issues
+                .map(issue => `- ${issue.description} (${issue.suggestion})`)
+                .join('\n')
+
+            const correctionPrompt = `⚠️ Tu respuesta anterior fue rechazada por contener errores:
+
+${issuesText}
+
+CORRECCIÓN REQUERIDA:
+- USA SOLO los nombres que vienen en el tool result
+- USA SOLO los montos que vienen en el tool result
+- Si el tool devuelve vacío (total: 0), responde "$ 0"
+- NO inventes nombres genéricos como "Carlos Rodriguez", "Maria Gimenez"
+
+Tool result real:
+${JSON.stringify(toolResult, null, 2)}
+
+Genera una nueva respuesta correcta usando SOLO los datos del tool result.`
+
+            // Regenerate response with correction
+            console.log('[OdooBIAgent] Regenerating response with correction...')
+            const correctionResult = await chat.sendMessageStream(correctionPrompt)
+
+            // Stream the corrected response
+            for await (const chunk of correctionResult.stream) {
+                const text = chunk.text()
+                if (text) yield text
+            }
+
+            response = await correctionResult.response
+        } else {
+            // Validation passed - stream the original response
+            console.log('[OdooBIAgent] Validation passed, streaming response')
+
+            // Since we already have the complete text, yield it in chunks to simulate streaming
+            const chunkSize = 50
+            for (let i = 0; i < candidateText.length; i += chunkSize) {
+                yield candidateText.substring(i, Math.min(i + chunkSize, candidateText.length))
+            }
+
+            response = validationResult.response
         }
 
         // Check if there's another function call in the response
-        const streamResponse = await streamResult.response
-        const nextCandidate = streamResponse.candidates?.[0]
+        const nextCandidate = response.candidates?.[0]
         const nextFunctionCall = nextCandidate?.content?.parts?.find(
             (part): part is Part & { functionCall: { name: string; args: Record<string, any> } } =>
                 'functionCall' in part
@@ -790,8 +852,7 @@ Ejecuta la consulta y responde al usuario.`
             return
         }
 
-        // Continue loop with new function call
-        response = streamResponse
+        // Continue loop with new function call (should be rare after validation)
     }
 
     // If we get here without returning, yield any remaining text

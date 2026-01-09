@@ -9,6 +9,7 @@ import { streamText } from 'ai'
 import { getClient } from '@/lib/supabase/client'
 import { routeMessage, buildCombinedPrompt } from '@/lib/agents/router'
 import { ResponseGuard } from '@/lib/validation/response-guard'
+import { PreSendValidator } from '@/lib/validation/pre-send-validator'
 
 const google = createGoogleGenerativeAI({
     apiKey: process.env.GEMINI_API_KEY
