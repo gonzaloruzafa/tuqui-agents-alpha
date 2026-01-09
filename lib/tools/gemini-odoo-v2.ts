@@ -75,6 +75,84 @@ export interface GeminiOdooResponse {
     text: string
     toolCalls?: ToolCall[]
     toolResults?: OdooToolResult[]
+    hallucinationDetected?: boolean
+}
+
+// ============================================
+// ANTI-HALLUCINATION VALIDATION HELPER
+// ============================================
+
+interface ValidationResult {
+    text: string
+    hallucinationDetected: boolean
+}
+
+/**
+ * Validates LLM response against tool results to detect hallucinations.
+ * Used by both chatWithOdoo (WhatsApp) and streamChatWithOdoo (Web).
+ * 
+ * @param llmText - The raw text from the LLM
+ * @param toolResults - Array of tool results from Odoo queries
+ * @param userMessage - Original user query for context
+ * @returns Validated/cleaned text and hallucination flag
+ */
+function validateAndCleanResponse(
+    llmText: string,
+    toolResults: OdooToolResult[],
+    userMessage: string
+): ValidationResult {
+    // Skip validation if no tool results
+    if (toolResults.length === 0) {
+        return { text: llmText, hallucinationDetected: false }
+    }
+
+    const lastToolResult = toolResults[toolResults.length - 1]
+
+    const validation = StrictValidator.validate(
+        llmText,
+        lastToolResult,
+        { userQuery: userMessage }
+    )
+
+    console.log('[OdooBIAgent/Validation] Result:', JSON.stringify({
+        isClean: validation.isClean,
+        hasFakeNames: validation.hasFakeNames,
+        hasWrongPeriod: validation.hasWrongPeriod,
+        fakeNamesFound: validation.fakeNamesFound,
+        realNames: validation.realNamesFromTool.slice(0, 5)
+    }))
+
+    if (!validation.isClean) {
+        console.warn('[OdooBIAgent/Validation] HALLUCINATION DETECTED:', validation.issues)
+
+        // Use clean response from tool data
+        if (validation.suggestedResponse) {
+            console.log('[OdooBIAgent/Validation] Using clean response from tool data')
+            return { text: validation.suggestedResponse, hallucinationDetected: true }
+        }
+
+        // Fallback: Generate basic response from tool data
+        let fallbackText = '⚠️ Datos verificados del sistema:\n\n'
+
+        if (lastToolResult.grouped) {
+            const entries = Object.entries(lastToolResult.grouped)
+                .sort((a: any, b: any) => (b[1].total || 0) - (a[1].total || 0))
+                .slice(0, 10)
+
+            for (const [itemName, data] of entries) {
+                const itemData = data as any
+                fallbackText += `• *${itemName}* - $ ${Math.round(itemData.total || 0).toLocaleString('es-AR')}\n`
+            }
+        }
+
+        if (lastToolResult.total) {
+            fallbackText += `\n*Total:* $ ${Math.round(lastToolResult.total).toLocaleString('es-AR')}`
+        }
+
+        return { text: fallbackText, hallucinationDetected: true }
+    }
+
+    return { text: llmText, hallucinationDetected: false }
 }
 
 // ============================================
@@ -641,10 +719,17 @@ Ejecuta la consulta y responde al usuario.`
         response = result.response
     }
 
+    // ============================================
+    // ANTI-HALLUCINATION VALIDATION
+    // ============================================
+    const rawText = response.text()
+    const validated = validateAndCleanResponse(rawText, toolResults, userMessage)
+
     return {
-        text: response.text(),
+        text: validated.text,
         toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-        toolResults: toolResults.length > 0 ? toolResults : undefined
+        toolResults: toolResults.length > 0 ? toolResults : undefined,
+        hallucinationDetected: validated.hallucinationDetected
     }
 }
 
@@ -765,7 +850,7 @@ Ejecuta la consulta y responde al usuario.`
         }
 
         // ============================================
-        // VALIDATION: Strict validation with fallback to clean response
+        // VALIDATION: Use shared helper for anti-hallucination
         // ============================================
         console.log('[OdooBIAgent] Generating response for validation...')
 
@@ -780,63 +865,21 @@ Ejecuta la consulta y responde al usuario.`
         const candidateText = validationResult.response.text()
         console.log('[OdooBIAgent] Response length:', candidateText.length)
 
-        // STRICT VALIDATION: Check for fake names and wrong data
-        const strictValidation = StrictValidator.validate(
-            candidateText,
-            toolResult,
-            { userQuery: userMessage }
-        )
+        // Use shared validation helper
+        const validated = validateAndCleanResponse(candidateText, [toolResult], userMessage)
 
-        console.log('[OdooBIAgent] StrictValidation:', JSON.stringify({
-            isClean: strictValidation.isClean,
-            hasFakeNames: strictValidation.hasFakeNames,
-            hasWrongPeriod: strictValidation.hasWrongPeriod,
-            fakeNamesFound: strictValidation.fakeNamesFound,
-            realNames: strictValidation.realNamesFromTool.slice(0, 5)
-        }))
-
-        if (!strictValidation.isClean) {
-            console.warn('[OdooBIAgent] HALLUCINATION DETECTED:', strictValidation.issues)
-            console.warn('[OdooBIAgent] Fake names found:', strictValidation.fakeNamesFound)
-
-            // CRITICAL: Don't trust LLM regeneration - use clean response from tool data
-            if (strictValidation.suggestedResponse) {
-                console.log('[OdooBIAgent] Using clean response from tool data')
-                yield strictValidation.suggestedResponse
-            } else {
-                // Fallback: Show raw tool data with warning
-                console.log('[OdooBIAgent] Fallback: showing raw tool data')
-                yield `⚠️ Datos verificados del sistema:\n\n`
-
-                if (toolResult.grouped) {
-                    const entries = Object.entries(toolResult.grouped)
-                        .sort((a: any, b: any) => (b[1].total || 0) - (a[1].total || 0))
-                        .slice(0, 10)
-
-                    for (const [itemName, data] of entries) {
-                        const itemData = data as any
-                        yield `• *${itemName}* - $ ${Math.round(itemData.total || 0).toLocaleString('es-AR')}\n`
-                    }
-                }
-
-                if (toolResult.total) {
-                    yield `\n*Total:* $ ${Math.round(toolResult.total).toLocaleString('es-AR')}`
-                }
-            }
-
-            response = validationResult.response
-        } else {
-            // Validation passed - stream the original response
-            console.log('[OdooBIAgent] Validation passed, streaming response')
-
-            // Since we already have the complete text, yield it in chunks to simulate streaming
-            const chunkSize = 50
-            for (let i = 0; i < candidateText.length; i += chunkSize) {
-                yield candidateText.substring(i, Math.min(i + chunkSize, candidateText.length))
-            }
-
-            response = validationResult.response
+        // Stream the validated text in chunks
+        const chunkSize = 50
+        for (let i = 0; i < validated.text.length; i += chunkSize) {
+            yield validated.text.substring(i, Math.min(i + chunkSize, validated.text.length))
         }
+
+        if (validated.hallucinationDetected) {
+            console.log('[OdooBIAgent] Hallucination corrected, returning clean response')
+            return
+        }
+
+        response = validationResult.response
 
         // Check if there's another function call in the response
         const nextCandidate = response.candidates?.[0]
