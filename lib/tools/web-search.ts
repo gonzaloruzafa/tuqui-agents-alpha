@@ -151,12 +151,29 @@ IMPORTANTE:
         const text = response.text()
         const groundingMetadata = (response as any).groundingMetadata
 
-        // Extraer sources del metadata
-        const sources = groundingMetadata?.retrievalMetadata?.map((meta: any) => ({
-            title: meta.title || 'Sin título',
-            url: meta.uri,
-            snippet: ''
-        })) || []
+        console.log('[WebSearch/Grounding] Raw GroundingMetadata:', JSON.stringify(groundingMetadata, null, 2))
+
+        // Extraer sources del metadata (Gemini 2.0 tiene un formato diferente)
+        let sources = []
+        
+        // Formato 1: retrievalMetadata (Vertex AI)
+        if (groundingMetadata?.retrievalMetadata) {
+            sources = groundingMetadata.retrievalMetadata.map((meta: any) => ({
+                title: meta.title || 'Sin título',
+                url: meta.uri,
+                snippet: ''
+            }))
+        } 
+        // Formato 2: searchEntryPoint / groundingChunks (Google AI SDK)
+        else if (groundingMetadata?.groundingChunks) {
+            sources = groundingMetadata.groundingChunks
+                .filter((chunk: any) => chunk.web)
+                .map((chunk: any) => ({
+                    title: chunk.web.title || 'Referencia web',
+                    url: chunk.web.uri,
+                    snippet: ''
+                }))
+        }
 
         console.log('[WebSearch/Grounding] Success, sources:', sources.length)
 
