@@ -156,7 +156,7 @@ IMPORTANTE:
         // Extraer sources del metadata (Gemini 2.0 tiene un formato diferente)
         let sources = []
         
-        // Formato Gemini 2.0 (Google AI SDK)
+        // Formato Gemini 2.0/3.0 (Google AI SDK)
         if (groundingMetadata?.groundingChunks) {
             console.log('[WebSearch/Grounding] Mapping groundingChunks to sources')
             sources = (groundingMetadata as any).groundingChunks
@@ -168,28 +168,26 @@ IMPORTANTE:
         }
         // Formato Vertex AI / Legacy
         else if (groundingMetadata?.retrievalMetadata) {
-            sources = groundingMetadata.retrievalMetadata.map((meta: any) => ({
+            sources = (groundingMetadata.retrievalMetadata as any).map((meta: any) => ({
                 title: meta.title || 'Sin título',
                 url: meta.uri,
                 snippet: ''
             }))
-        } 
-        // Formato 2: searchEntryPoint / groundingChunks (Google AI SDK)
-        else if (groundingMetadata?.groundingChunks) {
-            sources = groundingMetadata.groundingChunks
-                .filter((chunk: any) => chunk.web)
-                .map((chunk: any) => ({
-                    title: chunk.web.title || 'Referencia web',
-                    url: chunk.web.uri,
-                    snippet: ''
-                }))
         }
 
         console.log('[WebSearch/Grounding] Success, sources:', sources.length)
 
+        // IMPORTANTE: Si el modelo no devuelve links en el texto (o inventa), 
+        // inyectamos los links reales al final del "answer" para que el modelo padre los vea obligatoriamente.
+        let finalAnswer = text
+        if (sources.length > 0) {
+            const linksText = sources.map((s: any, i: number) => `[${i+1}] ${s.title}: ${s.url}`).join('\n')
+            finalAnswer += `\n\n--- REAL VERIFIED LINKS ---\n${linksText}`
+        }
+
         return {
             method: 'grounding',
-            answer: text,
+            answer: finalAnswer,
             sources,
             searchQueries: groundingMetadata?.webSearchQueries || []
         }
