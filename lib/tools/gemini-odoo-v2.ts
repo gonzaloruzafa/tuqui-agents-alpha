@@ -35,7 +35,7 @@ import {
     InsightContext
 } from './odoo/insights'
 import { getMetricsPromptSnippet } from '../odoo/metrics-dictionary'
-import { PreSendValidator } from '../validation/pre-send-validator'
+import { StrictValidator } from '../validation/strict-validator'
 
 // ============================================
 // TYPES
@@ -765,7 +765,7 @@ Ejecuta la consulta y responde al usuario.`
         }
 
         // ============================================
-        // VALIDATION: Buffer response and validate before streaming
+        // VALIDATION: Strict validation with fallback to clean response
         // ============================================
         console.log('[OdooBIAgent] Generating response for validation...')
 
@@ -780,53 +780,51 @@ Ejecuta la consulta y responde al usuario.`
         const candidateText = validationResult.response.text()
         console.log('[OdooBIAgent] Response length:', candidateText.length)
 
-        // Validate with PreSendValidator
-        const validation = PreSendValidator.validate(
+        // STRICT VALIDATION: Check for fake names and wrong data
+        const strictValidation = StrictValidator.validate(
             candidateText,
-            [toolResult],
+            toolResult,
             { userQuery: userMessage }
         )
 
-        console.log('[OdooBIAgent] Validation:', JSON.stringify({
-            approved: validation.approved,
-            confidence: validation.confidence,
-            issuesCount: validation.issues.length
+        console.log('[OdooBIAgent] StrictValidation:', JSON.stringify({
+            isClean: strictValidation.isClean,
+            hasFakeNames: strictValidation.hasFakeNames,
+            hasWrongPeriod: strictValidation.hasWrongPeriod,
+            fakeNamesFound: strictValidation.fakeNamesFound,
+            realNames: strictValidation.realNamesFromTool.slice(0, 5)
         }))
 
-        if (!validation.approved) {
-            console.warn('[OdooBIAgent] Response rejected by validator:', validation.issues)
+        if (!strictValidation.isClean) {
+            console.warn('[OdooBIAgent] HALLUCINATION DETECTED:', strictValidation.issues)
+            console.warn('[OdooBIAgent] Fake names found:', strictValidation.fakeNamesFound)
 
-            // Build correction prompt with specific issues
-            const issuesText = validation.issues
-                .map(issue => `- ${issue.description} (${issue.suggestion})`)
-                .join('\n')
+            // CRITICAL: Don't trust LLM regeneration - use clean response from tool data
+            if (strictValidation.suggestedResponse) {
+                console.log('[OdooBIAgent] Using clean response from tool data')
+                yield strictValidation.suggestedResponse
+            } else {
+                // Fallback: Show raw tool data with warning
+                console.log('[OdooBIAgent] Fallback: showing raw tool data')
+                yield `⚠️ Datos verificados del sistema:\n\n`
 
-            const correctionPrompt = `⚠️ Tu respuesta anterior fue rechazada por contener errores:
+                if (toolResult.grouped) {
+                    const entries = Object.entries(toolResult.grouped)
+                        .sort((a: any, b: any) => (b[1].total || 0) - (a[1].total || 0))
+                        .slice(0, 10)
 
-${issuesText}
+                    for (const [itemName, data] of entries) {
+                        const itemData = data as any
+                        yield `• *${itemName}* - $ ${Math.round(itemData.total || 0).toLocaleString('es-AR')}\n`
+                    }
+                }
 
-CORRECCIÓN REQUERIDA:
-- USA SOLO los nombres que vienen en el tool result
-- USA SOLO los montos que vienen en el tool result
-- Si el tool devuelve vacío (total: 0), responde "$ 0"
-- NO inventes nombres genéricos como "Carlos Rodriguez", "Maria Gimenez"
-
-Tool result real:
-${JSON.stringify(toolResult, null, 2)}
-
-Genera una nueva respuesta correcta usando SOLO los datos del tool result.`
-
-            // Regenerate response with correction
-            console.log('[OdooBIAgent] Regenerating response with correction...')
-            const correctionResult = await chat.sendMessageStream(correctionPrompt)
-
-            // Stream the corrected response
-            for await (const chunk of correctionResult.stream) {
-                const text = chunk.text()
-                if (text) yield text
+                if (toolResult.total) {
+                    yield `\n*Total:* $ ${Math.round(toolResult.total).toLocaleString('es-AR')}`
+                }
             }
 
-            response = await correctionResult.response
+            response = validationResult.response
         } else {
             // Validation passed - stream the original response
             console.log('[OdooBIAgent] Validation passed, streaming response')
