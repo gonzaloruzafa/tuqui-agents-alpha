@@ -67,6 +67,7 @@ export const TUQUI_UNIFIED = {
     ],
 
     // Super prompt que incluye todos los dominios
+    // NOTA: {{CURRENT_DATE}} se reemplaza dinámicamente en router.ts
     systemPrompt: `Sos Tuqui, el asistente de IA empresarial. Actuás como ORQUESTADOR de herramientas especializadas.
 
 ## 📅 CONTEXTO TEMPORAL

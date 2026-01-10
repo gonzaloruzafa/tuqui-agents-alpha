@@ -120,14 +120,14 @@ export async function interpretQuery(
     // Construir contexto del historial - ser más generoso con el contexto
     let historyContext = ''
     if (history.length > 0) {
-        const recentHistory = history.slice(-15) // Últimos 15 mensajes para mejor contexto
+        const recentHistory = history.slice(-20) // Últimos 20 mensajes (igual que el executor)
         historyContext = '\n\n**HISTORIAL DE CONVERSACIÓN (Analiza para mantener contexto):**\n'
         for (const msg of recentHistory) {
             const role = msg.role === 'model' ? 'Asistente' : 'Usuario'
             const text = msg.parts.map((p: any) => p.text || '').join('')
             if (text) {
-                // Incluir más contenido para capturar nombres, números, etc.
-                historyContext += `${role}: ${text.substring(0, 800)}\n`
+                // Aumentado a 2000 chars para capturar mejor el contexto temporal y nombres
+                historyContext += `${role}: ${text.substring(0, 2000)}\n`
             }
         }
     }

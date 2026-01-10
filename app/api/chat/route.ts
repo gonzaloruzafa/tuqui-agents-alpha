@@ -100,6 +100,16 @@ export async function POST(req: Request) {
         // 3. System Prompt (already merged with custom instructions + company context)
         let systemSystem = agent.merged_system_prompt || agent.system_prompt || 'Sos un asistente útil.'
         
+        // Replace {{CURRENT_DATE}} placeholder with actual date
+        const now = new Date()
+        const currentDate = now.toLocaleDateString('es-AR', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        })
+        systemSystem = systemSystem.replace(/\{\{CURRENT_DATE\}\}/g, currentDate)
+        
         // Add specialized prompt if routing detected a specialty
         if (systemPromptAddition) {
             systemSystem += systemPromptAddition
