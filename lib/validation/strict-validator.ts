@@ -10,6 +10,20 @@
  * 4. Si hay montos en la respuesta que NO están en el tool → RECHAZA
  */
 
+// Patrones de respuestas en inglés que indican "pensamiento" interno del LLM
+const ENGLISH_THINKING_PATTERNS = [
+  /^Clarify\s/i,
+  /^The\s+user\s+(is|was|wants|asked|needs)/i,
+  /^I\s+need\s+to\s/i,
+  /^Let\s+me\s/i,
+  /^Based\s+on\s+the\s/i,
+  /^According\s+to\s/i,
+  /^It\s+seems\s/i,
+  /^I\s+should\s/i,
+  /^First,?\s+I\s/i,
+  /^To\s+answer\s/i,
+]
+
 // Nombres genéricos que el LLM inventa frecuentemente
 const KNOWN_FAKE_NAMES = [
   'laura gómez', 'laura gomez',
@@ -39,6 +53,8 @@ export interface StrictValidation {
   hasFakeNames: boolean
   hasWrongPeriod: boolean
   hasInventedAmounts: boolean
+  hasEnglishThinking: boolean
+  hasAbsurdUnassigned: boolean
   fakeNamesFound: string[]
   realNamesFromTool: string[]
   suggestedResponse: string | null
@@ -101,21 +117,33 @@ export class StrictValidator {
       }
     }
 
-    // 5. Detectar período incorrecto
+    // 5. Detectar respuesta en inglés (pensamiento filtrado)
+    const hasEnglishThinking = this.detectEnglishThinking(llmResponse)
+    if (hasEnglishThinking) {
+      issues.push('Respuesta en inglés detectada (pensamiento interno filtrado)')
+    }
+
+    // 6. Detectar período incorrecto
     const hasWrongPeriod = this.detectWrongPeriod(llmResponse, context.userQuery)
     if (hasWrongPeriod) {
       issues.push('Período temporal incorrecto detectado')
     }
 
-    // 6. Detectar montos inventados
+    // 7. Detectar montos inventados
     const hasInventedAmounts = this.detectInventedAmounts(llmResponse, toolResult)
     if (hasInventedAmounts) {
       issues.push('Montos que no corresponden con datos reales')
     }
 
-    // 7. Generar respuesta sugerida si hay problemas
+    // 8. Detectar montos absurdos en "Sin asignar"
+    const hasAbsurdUnassigned = this.detectAbsurdUnassigned(toolResult)
+    if (hasAbsurdUnassigned) {
+      issues.push('Monto absurdo detectado en "Sin asignar" - posible error de datos')
+    }
+
+    // 9. Generar respuesta sugerida si hay problemas
     let suggestedResponse: string | null = null
-    if (fakeNamesFound.length > 0 || hasWrongPeriod || hasInventedAmounts) {
+    if (fakeNamesFound.length > 0 || hasWrongPeriod || hasInventedAmounts || hasEnglishThinking || hasAbsurdUnassigned) {
       suggestedResponse = this.generateCleanResponse(toolResult, context)
     }
 
@@ -124,6 +152,8 @@ export class StrictValidator {
       hasFakeNames: fakeNamesFound.length > 0,
       hasWrongPeriod,
       hasInventedAmounts,
+      hasEnglishThinking,
+      hasAbsurdUnassigned,
       fakeNamesFound,
       realNamesFromTool: realNames,
       suggestedResponse,
@@ -219,15 +249,61 @@ export class StrictValidator {
   }
 
   /**
+   * Detecta respuestas en inglés que filtran "pensamiento interno" del LLM
+   * Ejemplos: "Clarify the metric...", "The user is asking...", "I need to..."
+   */
+  private static detectEnglishThinking(response: string): boolean {
+    const trimmed = response.trim()
+    for (const pattern of ENGLISH_THINKING_PATTERNS) {
+      if (pattern.test(trimmed)) {
+        console.warn('[StrictValidator] English thinking detected:', trimmed.slice(0, 100))
+        return true
+      }
+    }
+    return false
+  }
+
+  /**
+   * Detecta montos absurdos en "Sin asignar" o categorías vacías
+   * Estos suelen indicar error de agrupación o datos corruptos
+   */
+  private static detectAbsurdUnassigned(toolResult: ToolResultData): boolean {
+    if (!toolResult.grouped) return false
+
+    // Umbral: si "Sin asignar" o similar tiene más de 1 billón, es sospechoso
+    const ABSURD_THRESHOLD = 1_000_000_000_000 // 1 trillion
+    const suspiciousKeys = ['sin asignar', 'false', 'undefined', 'null', 'n/a', '']
+
+    for (const [key, value] of Object.entries(toolResult.grouped)) {
+      const keyLower = key.toLowerCase().trim()
+      const isUnassigned = suspiciousKeys.some(s => keyLower === s || keyLower.includes('sin asignar'))
+      
+      if (isUnassigned && typeof value === 'object' && value.total) {
+        if (value.total > ABSURD_THRESHOLD) {
+          console.warn(`[StrictValidator] Absurd amount in "${key}": $${value.total.toLocaleString()}`)
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
+  /**
    * Detecta si se menciona un período incorrecto
+   * Ahora también valida año (2025 vs 2026)
    */
   private static detectWrongPeriod(response: string, userQuery: string): boolean {
     const responseLower = response.toLowerCase()
     const queryLower = userQuery.toLowerCase()
 
+    // Obtener año actual
+    const currentYear = new Date().getFullYear()
+    const currentMonth = new Date().getMonth() // 0 = enero
+
     // Si el usuario preguntó por "este mes" o "enero" y la respuesta dice otro mes
     if (queryLower.includes('este mes') || queryLower.includes('enero')) {
-      // Meses que NO deberían aparecer
+      // Meses que NO deberían aparecer (excepto el actual)
       const wrongMonths = ['octubre', 'noviembre', 'diciembre', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre']
       for (const month of wrongMonths) {
         if (responseLower.includes(month)) {
@@ -242,6 +318,28 @@ export class StrictValidator {
       for (const month of pastMonths) {
         if (responseLower.includes(month)) {
           return true
+        }
+      }
+    }
+
+    // NUEVO: Detectar año incorrecto
+    // Si estamos en 2026 y la respuesta menciona 2024 o 2025 como si fuera actual
+    const yearPattern = /\b(202[0-5])\b/g
+    const yearMatches = responseLower.match(yearPattern)
+    
+    if (yearMatches && currentYear === 2026) {
+      // Si el usuario pregunta por "este mes" o "hoy" y la respuesta dice 2024/2025
+      if (queryLower.includes('este mes') || queryLower.includes('hoy') || queryLower.includes('enero 2026')) {
+        for (const year of yearMatches) {
+          if (parseInt(year) < currentYear) {
+            // Verificar que no sea una comparación legítima (ej: "comparado con 2025")
+            const comparisonTerms = ['comparado', 'versus', 'vs', 'anterior', 'pasado', 'respecto']
+            const hasComparison = comparisonTerms.some(term => responseLower.includes(term))
+            if (!hasComparison) {
+              console.warn(`[StrictValidator] Wrong year detected: ${year} (current: ${currentYear})`)
+              return true
+            }
+          }
         }
       }
     }

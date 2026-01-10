@@ -172,16 +172,4 @@ Ante pedidos fuera de alcance: "No puedo realizar esa acción. Mi función es an
     placeholderText: 'Preguntale lo que quieras a Tuqui...'
 }
 
-/**
- * Obtener las capacidades formateadas para mostrar en UI
- */
-export function getCapabilitiesForUI() {
-    return TUQUI_UNIFIED.capabilities
-}
-
-/**
- * Obtener ejemplos de preguntas para sugerencias
- */
-export function getSuggestedQuestions(): string[] {
-    return TUQUI_UNIFIED.capabilities.flatMap(c => c.examples).slice(0, 6)
-}
+// Utility functions removed (getCapabilitiesForUI, getSuggestedQuestions) - unused

@@ -267,6 +267,4 @@ export function suggestFieldCorrection(modelName: string, wrongField: string): s
     return commonCorrections[modelName]?.[wrongField] || null
 }
 
-export function getSupportedModels(): string[] {
-    return ODOO_LITE_SCHEMA.map(m => m.name)
-}
+// getSupportedModels() removed - unused
