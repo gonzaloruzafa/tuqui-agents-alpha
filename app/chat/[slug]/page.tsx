@@ -166,7 +166,6 @@ export default function ChatPage() {
     const [lastTranscript, setLastTranscript] = useState('')
     const [isVoiceOpen, setIsVoiceOpen] = useState(false)
     const transcriptRef = useRef('')
-    const skipMessagesLoadRef = useRef(false)
 
     // Setup Speech Recognition
     useEffect(() => {
@@ -307,13 +306,6 @@ export default function ChatPage() {
     useEffect(() => {
         if (sessionIdParam) {
             setCurrentSessionId(sessionIdParam)
-            
-            // Skip loading if we just created this session in handleSend
-            if (skipMessagesLoadRef.current) {
-                console.log('[Chat] Skipping initial message load for new session')
-                skipMessagesLoadRef.current = false
-                return
-            }
 
             fetch(`/api/chat-sessions?sessionId=${sessionIdParam}`)
                 .then(res => res.ok ? res.json() : [])
@@ -352,6 +344,7 @@ export default function ChatPage() {
         try {
             // Create session if needed
             let sid = currentSessionId
+            let isNewSession = false
             if (!sid) {
                 const res = await fetch('/api/chat-sessions', {
                     method: 'POST',
@@ -361,11 +354,10 @@ export default function ChatPage() {
                 if (!res.ok) throw new Error('Failed to create session')
                 const session = await res.json()
                 sid = session.id
+                isNewSession = true
                 
-                // Prevent useEffect from wiping our optimistic message
-                skipMessagesLoadRef.current = true
+                // Update state but DON'T update URL yet (will do after streaming)
                 setCurrentSessionId(sid)
-                router.push(`/chat/${agentSlug}?session=${sid}`, { scroll: false })
             }
 
             // Save User Message
@@ -448,6 +440,11 @@ export default function ChatPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'save-message', sessionId: sid, role: 'assistant', content: botText })
             })
+
+            // Update URL AFTER streaming completes (avoids race condition with useEffect)
+            if (isNewSession && sid) {
+                window.history.replaceState(null, '', `/chat/${agentSlug}?session=${sid}`)
+            }
 
             // Generate title if it's the first message
             if (messages.length <= 1) {
