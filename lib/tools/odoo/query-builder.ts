@@ -16,6 +16,7 @@ export interface OdooSubQuery {
     model: string                   // Odoo model name
     operation: 'search' | 'count' | 'aggregate' | 'fields' | 'discover'
     domain?: any[]                  // Direct domain (takes precedence)
+    dateRange?: { start: string; end: string; label?: string } // Explicit date range from tool args
     filters?: string                // Natural language filters (parsed to domain)
     fields?: string[]               // Fields to retrieve
     groupBy?: string[]              // For aggregations
@@ -66,7 +67,8 @@ const queryCache = new Map<string, CacheEntry>()
 const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 
 function getCacheKey(tenantId: string, query: OdooSubQuery): string {
-    return `${tenantId}:${query.model}:${query.operation}:${JSON.stringify(query.domain || query.filters)}:${query.groupBy?.join(',') || ''}:${query.limit || 50}`
+    const datePart = query.dateRange ? `${query.dateRange.start}-${query.dateRange.end}` : ''
+    return `${tenantId}:${query.model}:${query.operation}:${JSON.stringify(query.domain || query.filters)}:${datePart}:${query.groupBy?.join(',') || ''}:${query.limit || 50}`
 }
 
 function getFromCache(key: string): any | null {
@@ -201,8 +203,9 @@ export const MODEL_CONFIG: Record<string, {
 
 /**
  * Parse natural language filters into Odoo domain
+ * If dateRange is provided, it takes precedence over textual parsing.
  */
-export function buildDomain(filters: string, model: string): any[] {
+export function buildDomain(filters: string, model: string, dateRange?: { start: string; end: string; label?: string }): any[] {
     const domain: any[] = []
     const config = MODEL_CONFIG[model] || { dateField: 'create_date', defaultFields: [] }
     const dateField = config.dateField
@@ -230,20 +233,79 @@ export function buildDomain(filters: string, model: string): any[] {
 
     let dateMatched = false
 
+    // Explicit date range from tool (preferred path)
+    if (dateRange?.start && dateRange?.end) {
+        domain.push([dateField, '>=', dateRange.start])
+        domain.push([dateField, '<=', dateRange.end])
+        dateMatched = true
+    }
+
     // Try to detect year in filters (e.g., "2024", "del 2023")
     const yearMatch = filters.match(/\b(202[0-9])\b/)
     const specifiedYear = yearMatch ? parseInt(yearMatch[1]) : null
 
-    for (const { regex, month } of monthPatterns) {
-        if (regex.test(filters)) {
-            const year = specifiedYear || (month > currentMonth ? currentYear - 1 : currentYear)
-            const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-            const endDay = new Date(year, month, 0).getDate()
-            const endDate = `${year}-${String(month).padStart(2, '0')}-${endDay}`
+    // ---- WEEK OF MONTH FILTER ---- (only if no explicit dateRange matched)
+    // "primera semana de diciembre", "second week of january", etc.
+    const weekOfMonthMatch = !dateMatched && filters.match(
+        /(?:primer[ao]?|first|1ra?|segund[ao]?|second|2da?|tercer[ao]?|third|3ra?|cuart[ao]?|fourth|4ta?|[uú]ltim[ao]?|last)\s*semana/i
+    )
+    
+    if (weekOfMonthMatch) {
+        // Determine which week (1-4 or last)
+        let weekNum = 1
+        const weekText = weekOfMonthMatch[0].toLowerCase()
+        if (/segund|second|2/.test(weekText)) weekNum = 2
+        else if (/tercer|third|3/.test(weekText)) weekNum = 3
+        else if (/cuart|fourth|4/.test(weekText)) weekNum = 4
+        else if (/[uú]ltim|last/.test(weekText)) weekNum = -1  // Last week
+        
+        // Find which month is mentioned
+        let targetMonth: number | null = null
+        for (const { regex, month } of monthPatterns) {
+            if (regex.test(filters)) {
+                targetMonth = month
+                break
+            }
+        }
+        
+        if (targetMonth !== null) {
+            const year = specifiedYear || (targetMonth > currentMonth ? currentYear - 1 : currentYear)
+            
+            let startDay: number, endDay: number
+            if (weekNum === -1) {
+                // Last week: last 7 days of the month
+                const lastDayOfMonth = new Date(year, targetMonth, 0).getDate()
+                startDay = lastDayOfMonth - 6
+                endDay = lastDayOfMonth
+            } else {
+                // Week 1-4: days 1-7, 8-14, 15-21, 22-28
+                startDay = (weekNum - 1) * 7 + 1
+                endDay = Math.min(weekNum * 7, new Date(year, targetMonth, 0).getDate())
+            }
+            
+            const monthStr = String(targetMonth).padStart(2, '0')
+            const startDate = `${year}-${monthStr}-${String(startDay).padStart(2, '0')}`
+            const endDate = `${year}-${monthStr}-${String(endDay).padStart(2, '0')}`
+            
             domain.push([dateField, '>=', startDate])
             domain.push([dateField, '<=', endDate])
             dateMatched = true
-            break
+        }
+    }
+
+    // ---- MONTH FILTER (only if week filter didn't match and no explicit dateRange) ----
+    if (!dateMatched) {
+        for (const { regex, month } of monthPatterns) {
+            if (regex.test(filters)) {
+                const year = specifiedYear || (month > currentMonth ? currentYear - 1 : currentYear)
+                const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+                const endDay = new Date(year, month, 0).getDate()
+                const endDate = `${year}-${String(month).padStart(2, '0')}-${endDay}`
+                domain.push([dateField, '>=', startDate])
+                domain.push([dateField, '<=', endDate])
+                dateMatched = true
+                break
+            }
         }
     }
 
@@ -488,7 +550,7 @@ async function executeSingleQuery(
 
     try {
         const config = MODEL_CONFIG[query.model] || { dateField: 'create_date', defaultFields: [] }
-        const domain = query.domain || (query.filters ? buildDomain(query.filters, query.model) : [])
+        const domain = query.domain || (query.filters ? buildDomain(query.filters, query.model, query.dateRange) : [])
         const fields = query.fields || config.defaultFields
         const limit = Math.min(query.limit || 50, 500) // Max 500 records
 

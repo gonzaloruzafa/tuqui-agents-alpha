@@ -424,6 +424,15 @@ COMPARACIONES: Usa compare: "mom" (mes vs mes anterior) o "yoy" (año vs año an
                             type: SchemaType.STRING,
                             description: 'Filtros en lenguaje natural: "abril", "este mes", "por cobrar", "facturas cliente", "inactivos", etc.'
                         },
+                        date_range: {
+                            type: SchemaType.OBJECT,
+                            description: 'Rango de fechas exacto preferido (YYYY-MM-DD)',
+                            properties: {
+                                start: { type: SchemaType.STRING, description: 'Fecha inicio (YYYY-MM-DD)' },
+                                end: { type: SchemaType.STRING, description: 'Fecha fin (YYYY-MM-DD)' },
+                                label: { type: SchemaType.STRING, description: 'Etiqueta opcional del rango (ej: "primera semana")' }
+                            }
+                        },
                         groupBy: {
                             type: SchemaType.ARRAY,
                             description: 'Campos para agrupar (para aggregate): ["partner_id"], ["stage_id"], ["user_id"]',
@@ -470,6 +479,7 @@ async function executeIntelligentQuery(
             model: string
             operation: string
             filters?: string
+            date_range?: { start: string; end: string; label?: string }
             groupBy?: string[]
             limit?: number
             orderBy?: string
@@ -490,6 +500,7 @@ async function executeIntelligentQuery(
             model: q.model,
             operation: q.operation as 'search' | 'count' | 'aggregate',
             filters: q.filters,
+            dateRange: q.date_range ? { start: q.date_range.start, end: q.date_range.end, label: q.date_range.label } : undefined,
             groupBy: q.groupBy,
             limit: q.limit,
             orderBy: q.orderBy,
