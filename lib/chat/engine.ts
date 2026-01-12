@@ -7,6 +7,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 import { Agent } from '@/lib/agents/service'
 import { routeMessage, buildCombinedPrompt } from '@/lib/agents/router'
+import { ToolCallRecord } from '@/lib/supabase/chat-history'
 
 const google = createGoogleGenerativeAI({
     apiKey: process.env.GEMINI_API_KEY
@@ -15,6 +16,7 @@ const google = createGoogleGenerativeAI({
 export interface ChatMessage {
     role: 'user' | 'assistant' | 'system'
     content: string
+    tool_calls?: ToolCallRecord[]  // Tool calls for context persistence
 }
 
 export interface ChatEngineParams {
@@ -27,6 +29,7 @@ export interface ChatEngineParams {
 
 export interface ChatEngineResponse {
     text: string
+    toolCalls?: ToolCallRecord[]  // Tool calls from this response
     usage?: {
         totalTokens: number
     }
@@ -123,16 +126,27 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
         const hasOdooTools = effectiveAgent.tools?.some((t: string) => t.startsWith('odoo'))
         let responseText = ''
         let totalTokens = 0
+        let responseToolCalls: ToolCallRecord[] = []
 
         if (hasOdooTools) {
             // Path A: Odoo BI Agent (Native loop)
             console.log('[ChatEngine] Using Odoo BI Agent path')
 
-            // Convert history for Gemini
-            const history = messages.slice(0, -1).map(m => ({
-                role: m.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: m.content }]
-            })) as any[]
+            // Convert history for Gemini - include tool_calls for context persistence
+            const history = messages.slice(0, -1).map(m => {
+                let content = m.content
+                // Enrich history with tool call info if available
+                if (m.role === 'assistant' && m.tool_calls && m.tool_calls.length > 0) {
+                    const toolInfo = m.tool_calls.map(tc => 
+                        `[Tool: ${tc.name}${tc.result_summary ? ` → ${tc.result_summary}` : ''}]`
+                    ).join(' ')
+                    content = `${toolInfo}\n\n${content}`
+                }
+                return {
+                    role: m.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: content }]
+                }
+            }) as any[]
 
             console.log('[ChatEngine] Odoo Path - System Prompt:', systemPrompt.substring(0, 200) + '...')
             console.log('[ChatEngine] Odoo Path - User Message:', inputContent)
@@ -154,6 +168,18 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
             responseText = odooRes.text
             // Odoo BI Agent doesn't expose usage yet, using estimate for now
             totalTokens = responseText.length / 3
+            
+            // Extract tool calls for persistence
+            if (odooRes.toolCalls && odooRes.toolCalls.length > 0) {
+                responseToolCalls = odooRes.toolCalls.map(tc => ({
+                    name: tc.name,
+                    args: tc.args,
+                    // Create a summary of the result for context
+                    result_summary: odooRes.toolResults?.[0] ? 
+                        `${odooRes.toolResults[0].count || 0} registros, total: ${odooRes.toolResults[0].total || 0}` : 
+                        undefined
+                }))
+            }
         } else {
             // Path B: Standard Agent with Tools (Native Gemini wrapper)
             // Using native wrapper because AI SDK has schema conversion issues with Gemini 2.0
@@ -192,6 +218,7 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
 
         return {
             text: responseText,
+            toolCalls: responseToolCalls.length > 0 ? responseToolCalls : undefined,
             usage: { totalTokens: Math.ceil(totalTokens) }
         }
 

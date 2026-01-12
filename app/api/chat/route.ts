@@ -187,7 +187,11 @@ export async function POST(req: Request) {
                     async start(controller) {
                         try {
                             for await (const chunk of stream) {
-                                controller.enqueue(encoder.encode(chunk))
+                                // Only stream text chunks, skip metadata objects
+                                if (typeof chunk === 'string') {
+                                    controller.enqueue(encoder.encode(chunk))
+                                }
+                                // StreamChunk objects are metadata for non-streaming consumers
                             }
                             controller.close()
                         } catch (error) {

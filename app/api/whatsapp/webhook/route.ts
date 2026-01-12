@@ -154,8 +154,8 @@ export async function POST(req: NextRequest) {
             channel: 'whatsapp'
         })
 
-        // 5. Save assistant response and send via WhatsApp
-        await saveMessage(tenantId, sessionId, 'assistant', result.text)
+        // 5. Save assistant response with tool_calls and send via WhatsApp
+        await saveMessage(tenantId, sessionId, 'assistant', result.text, result.toolCalls)
         
         // Format tables for WhatsApp before chunking
         const formattedText = formatTablesForWhatsApp(result.text)

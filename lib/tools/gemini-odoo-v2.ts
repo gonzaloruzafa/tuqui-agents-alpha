@@ -156,7 +156,7 @@ function validateAndCleanResponse(
 }
 
 // ============================================
-// BI ANALYST SYSTEM PROMPT
+// BI ANALYST SYSTEM PROMPT (UNIFIED - includes interpreter rules)
 // ============================================
 
 const BI_ANALYST_PROMPT = `Eres un analista de Business Intelligence experto trabajando con datos de Odoo ERP.
@@ -164,7 +164,36 @@ const BI_ANALYST_PROMPT = `Eres un analista de Business Intelligence experto tra
 **TU ROL:**
 - Analizar datos de ventas, facturas, clientes, CRM, stock, usuarios y actividades
 - Responder preguntas de manera precisa y directa
-- NUNCA pedir clarificación si el historial tiene la información necesaria
+- Usar el historial de conversación para entender el contexto
+
+## 🔄 MANEJO DE CONTEXTO CONVERSACIONAL - CRÍTICO
+
+### 1. PERSISTENCIA TEMPORAL (REGLA DE ORO)
+Si el usuario definió un período anteriormente (ej: "2025", "enero", "este mes"):
+- MANTENERLO en todas las preguntas siguientes hasta que cambie explícitamente
+- Ejemplo: "ventas de enero" → "¿a quiénes?" → DEBE filtrar por enero
+
+### 2. PREGUNTAS DE SEGUIMIENTO (SIEMPRE mantener contexto previo)
+Detectar y responder apropiadamente a:
+- "a quienes?" / "a qué clientes?" → Mantener período + agrupar por partner_id
+- "por producto?" / "desglosame por producto" → Mantener período + agrupar por product_id
+- "quiénes vendieron?" / "por vendedor" → Mantener período + agrupar por user_id
+- "más detalle" / "expandí" → Agregar más groupBy o aumentar limit
+- "el segundo?" / "cuanto?" después de ranking → Extraer entidad del historial
+
+### 3. REFERENCIAS IMPLÍCITAS
+Cuando el usuario dice:
+- "qué vendió martin?" después de un ranking → model: sale.order.line + filtrar por Martin
+- "desglosame eso" → Repetir última consulta con más detalle
+- "compara con el mes anterior" → Agregar compare: 'mom'
+
+### 4. MODELOS SEGÚN CONTEXTO
+- "ventas" / "vendedores" → sale.order
+- "productos vendidos" / "qué vendió [nombre]" → sale.order.line (para detalle de líneas)
+- "compras" / "proveedores" → purchase.order
+- "facturas" → account.move
+- "stock" / "inventario" → stock.quant
+- "caja" / "plata disponible" → account.journal con type: bank
 
 **🚨 REGLA CRÍTICA - CONTEXTO TEMPORAL EN PREGUNTAS DE SEGUIMIENTO:**
 
@@ -172,18 +201,12 @@ Cuando el usuario hace una pregunta de seguimiento ("a quienes?", "por producto?
 SIEMPRE mantener el mismo período temporal de la pregunta anterior:
 
 EJEMPLO:
-- Usuario: "que vendimos en enero" → Filtro: enero 2026
-- Usuario: "a quienes?" → Filtro: enero 2026 (MISMO PERÍODO)
-- Usuario: "y por producto?" → Filtro: enero 2026 (MISMO PERÍODO)
+- Usuario: "que vendimos en enero" → Filtro: enero
+- Usuario: "a quienes?" → Filtro: enero (MISMO PERÍODO)
+- Usuario: "y por producto?" → Filtro: enero (MISMO PERÍODO)
 
 Si NO mantienes el filtro de fecha, vas a sumar TODOS los datos históricos y los montos serán ABSURDOS
 (miles de millones en vez de millones).
-
-PREGUNTAS DE SEGUIMIENTO COMUNES (SIEMPRE mantener período anterior):
-- "a quienes?" / "a qué clientes?"
-- "por producto?" / "desglosame por producto"
-- "quiénes vendieron?" / "por vendedor"
-- "más detalle" / "expandí"
 
 **⚠️ REGLA CRÍTICA - MOSTRAR DATOS REALES (NO INVENTAR):**
 
@@ -198,6 +221,9 @@ SI EL TOOL DEVUELVE DATOS:
 - ❌ PROHIBIDO: Cambiar a "$ 92.450.000"
 
 NOMBRES GENÉRICOS = ALUCINACIÓN:
+Si estás pensando escribir "Carlos Rodriguez", "Juan Perez", "Maria Gimenez":
+→ DETENTE. Esos nombres son inventados.
+→ USA SOLO los nombres que vienen del tool result.
 Si estás pensando escribir "Carlos Rodriguez", "Juan Perez", "Maria Gimenez":
 → DETENTE. Esos nombres son inventados.
 → USA SOLO los nombres que vienen del tool result.
@@ -641,65 +667,68 @@ export async function chatWithOdoo(
     console.log('[OdooBIAgent/chatWithOdoo] Using unified flow via streamChatWithOdoo')
     
     let fullText = ''
+    let toolCalls: ToolCall[] = []
+    let toolResults: OdooToolResult[] = []
+    let hallucinationDetected = false
     
-    // Consume the streaming generator and collect all text
+    // Consume the streaming generator and collect all data
     for await (const chunk of streamChatWithOdoo(tenantId, systemPrompt, userMessage, history)) {
-        fullText += chunk
+        if (typeof chunk === 'string') {
+            fullText += chunk
+        } else {
+            // Chunk contains metadata
+            if (chunk.toolCalls) toolCalls = chunk.toolCalls
+            if (chunk.toolResults) toolResults = chunk.toolResults
+            if (chunk.hallucinationDetected) hallucinationDetected = true
+            if (chunk.text) fullText += chunk.text
+        }
     }
     
     return {
-        text: fullText
+        text: fullText,
+        toolCalls,
+        toolResults,
+        hallucinationDetected
     }
+}
+
+interface StreamChunk {
+    text?: string
+    toolCalls?: ToolCall[]
+    toolResults?: OdooToolResult[]
+    hallucinationDetected?: boolean
 }
 
 /**
  * Stream chat with Odoo for real-time responses
  * 
- * Flow:
- * 1. Interpreter: Analiza mensaje + historial → Query estructurada
- * 2. Executor: Ejecuta query con tool call → Respuesta formateada
+ * SIMPLIFIED FLOW (v3 - Single LLM Call):
+ * 1. Send user message directly to Gemini with function calling
+ * 2. Gemini decides when to call odoo_intelligent_query
+ * 3. Execute tool and let Gemini format response
+ * 4. Validate response against tool results
+ * 
+ * No more interpreter step - context is maintained via history with tool_calls
  */
 export async function* streamChatWithOdoo(
     tenantId: string,
     systemPrompt: string,
     userMessage: string,
     history: Content[] = []
-): AsyncGenerator<string, void, unknown> {
+): AsyncGenerator<string | StreamChunk, void, unknown> {
+    const startTime = Date.now()
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
-    // ============================================
-    // PASO 1: INTERPRETAR LA CONSULTA
-    // ============================================
-    console.log('[OdooBIAgent] Step 1: Interpreting query...')
+    console.log('[OdooBIAgent] === Starting Single-Call Flow ===')
     console.log('[OdooBIAgent] History length:', history.length)
-
-    const { interpretQuery, interpretedQueryToToolParams } = await import('./odoo/interpreter')
-    const interpreted = await interpretQuery(userMessage, history)
-
-    console.log('[OdooBIAgent] Interpreted:', JSON.stringify(interpreted, null, 2))
-
-    // Si necesita clarificación, preguntar al usuario
-    if (interpreted.intent === 'clarify') {
-        yield interpreted.needsClarification || interpreted.description
-        return
-    }
+    console.log('[OdooBIAgent] User message:', userMessage.substring(0, 100))
 
     // ============================================
-    // PASO 2: EJECUTAR LA CONSULTA
+    // SINGLE LLM CALL WITH FUNCTION CALLING
     // ============================================
-    console.log('[OdooBIAgent] Step 2: Executing query...')
-
-    // Construir prompt mejorado con la interpretación
-    const executorPrompt = `${BI_ANALYST_PROMPT}
-
-**CONSULTA INTERPRETADA:**
-${JSON.stringify(interpreted, null, 2)}
-
-**INSTRUCCIONES:**
-- Usa odoo_intelligent_query para ejecutar esta consulta
-- La interpretación ya analizó el contexto y el historial
-- Responde de forma clara y concisa con los datos obtenidos
-- Formato: español, montos legibles, emojis para tendencias
+    
+    // Build complete system prompt
+    const fullSystemPrompt = `${BI_ANALYST_PROMPT}
 
 ${systemPrompt}`
 
@@ -713,31 +742,27 @@ ${systemPrompt}`
         },
         systemInstruction: {
             role: 'user',
-            parts: [{ text: executorPrompt }]
+            parts: [{ text: fullSystemPrompt }]
         }
     })
 
-    // Incluir historial para contexto adicional
+    // Start chat with history for context
     const chat = model.startChat({ history })
 
-    // Mensaje mejorado que incluye la interpretación
-    const enhancedMessage = `Consulta del usuario: "${userMessage}"
-
-Interpretación: ${interpreted.description}
-Modelo: ${interpreted.model}
-Operación: ${interpreted.intent}
-${interpreted.period ? `Período: ${interpreted.period}` : ''}
-${interpreted.groupBy ? `Agrupar por: ${interpreted.groupBy.join(', ')}` : ''}
-${interpreted.metric ? `Métrica: ${interpreted.metric}` : ''}
-${interpreted.contextFromHistory ? `Contexto: ${interpreted.contextFromHistory}` : ''}
-
-Ejecuta la consulta y responde al usuario.`
-
-    // First turn - send message and check for function calls
-    let result = await chat.sendMessage(enhancedMessage)
+    // Timing: LLM first response
+    const llmStartTime = Date.now()
+    
+    // Send user message directly - no interpreter step!
+    let result = await chat.sendMessage(userMessage)
     let response = result.response
 
-    // Process up to 5 function calls
+    console.log(`[OdooBIAgent] LLM first response: ${Date.now() - llmStartTime}ms`)
+
+    // Track tool calls for persistence
+    const collectedToolCalls: ToolCall[] = []
+    const collectedToolResults: OdooToolResult[] = []
+
+    // Process up to 5 function calls (usually just 1)
     for (let i = 0; i < 5; i++) {
         const candidate = response.candidates?.[0]
         const functionCall = candidate?.content?.parts?.find(
@@ -748,32 +773,42 @@ Ejecuta la consulta y responde al usuario.`
         if (!functionCall) break
 
         const { name, args } = functionCall.functionCall
-        console.log(`[OdooBIAgent Stream] Tool call: ${name}`)
+        console.log(`[OdooBIAgent] Tool call #${i + 1}: ${name}`)
+
+        // Track the tool call
+        collectedToolCalls.push({ name, args })
 
         // Show progress indicator
         const queryCount = (args as any).queries?.length || 1
         yield `🔧 Analizando datos (${queryCount} consulta${queryCount > 1 ? 's' : ''})...\n\n`
 
+        // Timing: Tool execution
+        const toolStartTime = Date.now()
+        
         // Execute the tool
         const toolResult = await executeIntelligentQuery(tenantId, args as any)
+        
+        console.log(`[OdooBIAgent] Tool execution: ${Date.now() - toolStartTime}ms`)
+
+        collectedToolResults.push(toolResult)
 
         if (!toolResult.success) {
             yield `❌ Error: ${toolResult.error}\n`
+            // Emit metadata for non-streaming consumer
+            yield { toolCalls: collectedToolCalls, toolResults: collectedToolResults } as StreamChunk
             return
         }
 
-        // Prepare response for model
+        // Prepare response for model with insights
         const responseForModel: any = { ...toolResult }
         if (toolResult.insights && toolResult.insights.length > 0) {
             responseForModel.insights_text = formatInsightsAsText(toolResult.insights)
         }
 
-        // ============================================
-        // VALIDATION: Use shared helper for anti-hallucination
-        // ============================================
-        console.log('[OdooBIAgent] Generating response for validation...')
+        // Timing: LLM second response (with tool result)
+        const llm2StartTime = Date.now()
 
-        // Send function response and get complete response (non-streaming)
+        // Send function response and get final response
         const validationResult = await chat.sendMessage([{
             functionResponse: {
                 name,
@@ -781,17 +816,32 @@ Ejecuta la consulta y responde al usuario.`
             }
         }])
 
+        console.log(`[OdooBIAgent] LLM response with tool result: ${Date.now() - llm2StartTime}ms`)
+
         const candidateText = validationResult.response.text()
         console.log('[OdooBIAgent] Response length:', candidateText.length)
 
-        // Use shared validation helper
+        // ============================================
+        // VALIDATION: Anti-hallucination check
+        // ============================================
+        const validationStartTime = Date.now()
         const validated = validateAndCleanResponse(candidateText, [toolResult], userMessage)
+        console.log(`[OdooBIAgent] Validation: ${Date.now() - validationStartTime}ms`)
 
         // Stream the validated text in chunks
         const chunkSize = 50
-        for (let i = 0; i < validated.text.length; i += chunkSize) {
-            yield validated.text.substring(i, Math.min(i + chunkSize, validated.text.length))
+        for (let j = 0; j < validated.text.length; j += chunkSize) {
+            yield validated.text.substring(j, Math.min(j + chunkSize, validated.text.length))
         }
+
+        // Emit metadata for non-streaming consumer
+        yield {
+            toolCalls: collectedToolCalls,
+            toolResults: collectedToolResults,
+            hallucinationDetected: validated.hallucinationDetected
+        } as StreamChunk
+
+        console.log(`[OdooBIAgent] === Total time: ${Date.now() - startTime}ms ===`)
 
         if (validated.hallucinationDetected) {
             console.log('[OdooBIAgent] Hallucination corrected, returning clean response')
@@ -800,7 +850,7 @@ Ejecuta la consulta y responde al usuario.`
 
         response = validationResult.response
 
-        // Check if there's another function call in the response
+        // Check if there's another function call
         const nextCandidate = response.candidates?.[0]
         const nextFunctionCall = nextCandidate?.content?.parts?.find(
             (part): part is Part & { functionCall: { name: string; args: Record<string, any> } } =>
@@ -808,16 +858,18 @@ Ejecuta la consulta y responde al usuario.`
         )
 
         if (!nextFunctionCall) {
-            // No more function calls, we're done
             return
         }
-
-        // Continue loop with new function call (should be rare after validation)
     }
 
-    // If we get here without returning, yield any remaining text
+    // If no function calls, return direct text response
     const text = response.text()
-    if (text) yield text
+    if (text) {
+        yield text
+        yield { toolCalls: collectedToolCalls, toolResults: collectedToolResults } as StreamChunk
+    }
+
+    console.log(`[OdooBIAgent] === Total time (no tools): ${Date.now() - startTime}ms ===`)
 }
 
 // Export for testing

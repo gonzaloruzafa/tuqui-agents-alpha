@@ -88,17 +88,30 @@ export async function getRecentUserMessages(tenantId: string, userEmail: string,
     })) || []
 }
 
-export async function saveMessage(tenantId: string, sessionId: string, role: 'user' | 'assistant', content: string) {
+export interface ToolCallRecord {
+    name: string
+    args?: Record<string, any>
+    result_summary?: string
+}
+
+export async function saveMessage(
+    tenantId: string, 
+    sessionId: string, 
+    role: 'user' | 'assistant', 
+    content: string,
+    toolCalls?: ToolCallRecord[]
+) {
     const db = await getTenantClient(tenantId)
 
-    // Save message
+    // Save message with optional tool_calls
     const { error: msgError } = await db
         .from('chat_messages')
         .insert({
             tenant_id: tenantId,
             session_id: sessionId,
             role,
-            content
+            content,
+            tool_calls: toolCalls ? JSON.stringify(toolCalls) : null
         })
 
     // Update session timestamp
