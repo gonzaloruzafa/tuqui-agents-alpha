@@ -1,0 +1,360 @@
+nohup: ignoring input
+
+> tuqui-agents-alpha@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.0 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.2.103:3000
+- Environments: .env.local
+- Experiments (use with caution):
+  · serverActions
+
+✓ Starting...
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 907ms
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-001-1768249045489 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 4 }, history: {}, combined: { erp: 12 } }
+[Router] Selected: odoo (high confidence, score: 12)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "ventas primera semana de dicie..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 0
+[OdooBIAgent] User message: ventas primera semana de diciembre?
+[TestChat] Error in test e2e-spicy-aggregation-check-SPICY-001-1768249045489: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent: [404 Not Found] models/gemini-2.0-pro-exp-02-05 is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at async streamChatWithOdoo (lib/tools/gemini-odoo-v2.ts:782:18)
+    at async POST (app/api/internal/chat-test/route.ts:117:30)
+  780 |     
+  781 |     // Send user message directly - no interpreter step!
+> 782 |     let result = await chat.sendMessage(userMessage)
+      |                  ^
+  783 |     let response = result.response
+  784 |
+  785 |     console.log(`[OdooBIAgent] LLM first response: ${Date.now() - llmStartTime}ms`) {
+  status: 404,
+  statusText: 'Not Found',
+  errorDetails: undefined
+}
+ POST /api/internal/chat-test 500 in 6.0s (compile: 475ms, render: 5.5s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-002-1768249053071 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 8 }, history: { erp: 4 }, combined: { erp: 28 } }
+[Router] Selected: odoo (high confidence, score: 28)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "dame top 10 por vendedor..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 2
+[OdooBIAgent] User message: dame top 10 por vendedor
+[TestChat] Error in test e2e-spicy-aggregation-check-SPICY-002-1768249053071: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent: [404 Not Found] models/gemini-2.0-pro-exp-02-05 is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at async streamChatWithOdoo (lib/tools/gemini-odoo-v2.ts:782:18)
+    at async POST (app/api/internal/chat-test/route.ts:117:30)
+  780 |     
+  781 |     // Send user message directly - no interpreter step!
+> 782 |     let result = await chat.sendMessage(userMessage)
+      |                  ^
+  783 |     let response = result.response
+  784 |
+  785 |     console.log(`[OdooBIAgent] LLM first response: ${Date.now() - llmStartTime}ms`) {
+  status: 404,
+  statusText: 'Not Found',
+  errorDetails: undefined
+}
+ POST /api/internal/chat-test 500 in 3.8s (compile: 5ms, render: 3.8s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-003-1768249058355 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 6 }, history: { erp: 4 }, combined: { erp: 22 } }
+[Router] Selected: odoo (high confidence, score: 22)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "top 10 por cliente?..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 2
+[OdooBIAgent] User message: top 10 por cliente?
+[TestChat] Error in test e2e-spicy-aggregation-check-SPICY-003-1768249058355: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent: [404 Not Found] models/gemini-2.0-pro-exp-02-05 is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at async streamChatWithOdoo (lib/tools/gemini-odoo-v2.ts:782:18)
+    at async POST (app/api/internal/chat-test/route.ts:117:30)
+  780 |     
+  781 |     // Send user message directly - no interpreter step!
+> 782 |     let result = await chat.sendMessage(userMessage)
+      |                  ^
+  783 |     let response = result.response
+  784 |
+  785 |     console.log(`[OdooBIAgent] LLM first response: ${Date.now() - llmStartTime}ms`) {
+  status: 404,
+  statusText: 'Not Found',
+  errorDetails: undefined
+}
+ POST /api/internal/chat-test 500 in 4.5s (compile: 2ms, render: 4.5s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-001-1768249141717 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 4 }, history: {}, combined: { erp: 12 } }
+[Router] Selected: odoo (high confidence, score: 12)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "ventas primera semana de dicie..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 0
+[OdooBIAgent] User message: ventas primera semana de diciembre?
+[TestChat] Error in test e2e-spicy-aggregation-check-SPICY-001-1768249141717: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent: [404 Not Found] models/gemini-2.0-pro-exp-02-05 is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at async streamChatWithOdoo (lib/tools/gemini-odoo-v2.ts:782:18)
+    at async POST (app/api/internal/chat-test/route.ts:117:30)
+  780 |     
+  781 |     // Send user message directly - no interpreter step!
+> 782 |     let result = await chat.sendMessage(userMessage)
+      |                  ^
+  783 |     let response = result.response
+  784 |
+  785 |     console.log(`[OdooBIAgent] LLM first response: ${Date.now() - llmStartTime}ms`) {
+  status: 404,
+  statusText: 'Not Found',
+  errorDetails: undefined
+}
+ POST /api/internal/chat-test 500 in 3.4s (compile: 2ms, render: 3.4s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-002-1768249146674 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 8 }, history: { erp: 4 }, combined: { erp: 28 } }
+[Router] Selected: odoo (high confidence, score: 28)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "dame top 10 por vendedor..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 2
+[OdooBIAgent] User message: dame top 10 por vendedor
+[TestChat] Error in test e2e-spicy-aggregation-check-SPICY-002-1768249146674: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent: [404 Not Found] models/gemini-2.0-pro-exp-02-05 is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at async streamChatWithOdoo (lib/tools/gemini-odoo-v2.ts:782:18)
+    at async POST (app/api/internal/chat-test/route.ts:117:30)
+  780 |     
+  781 |     // Send user message directly - no interpreter step!
+> 782 |     let result = await chat.sendMessage(userMessage)
+      |                  ^
+  783 |     let response = result.response
+  784 |
+  785 |     console.log(`[OdooBIAgent] LLM first response: ${Date.now() - llmStartTime}ms`) {
+  status: 404,
+  statusText: 'Not Found',
+  errorDetails: undefined
+}
+ POST /api/internal/chat-test 500 in 5.3s (compile: 2ms, render: 5.3s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-003-1768249153473 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 6 }, history: { erp: 4 }, combined: { erp: 22 } }
+[Router] Selected: odoo (high confidence, score: 22)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "top 10 por cliente?..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 2
+[OdooBIAgent] User message: top 10 por cliente?
+[TestChat] Error in test e2e-spicy-aggregation-check-SPICY-003-1768249153473: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent: [404 Not Found] models/gemini-2.0-pro-exp-02-05 is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at async streamChatWithOdoo (lib/tools/gemini-odoo-v2.ts:782:18)
+    at async POST (app/api/internal/chat-test/route.ts:117:30)
+  780 |     
+  781 |     // Send user message directly - no interpreter step!
+> 782 |     let result = await chat.sendMessage(userMessage)
+      |                  ^
+  783 |     let response = result.response
+  784 |
+  785 |     console.log(`[OdooBIAgent] LLM first response: ${Date.now() - llmStartTime}ms`) {
+  status: 404,
+  statusText: 'Not Found',
+  errorDetails: undefined
+}
+ POST /api/internal/chat-test 500 in 5.6s (compile: 2ms, render: 5.6s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-001-1768249184291 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 4 }, history: {}, combined: { erp: 12 } }
+[Router] Selected: odoo (high confidence, score: 12)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "ventas primera semana de dicie..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 0
+[OdooBIAgent] User message: ventas primera semana de diciembre?
+[OdooBIAgent] LLM first response: 1331ms
+[OdooBIAgent] Tool call #1: odoo_intelligent_query
+[OdooBIAgent] Tool execution: 2661ms
+[OdooBIAgent] LLM response with tool result: 1025ms
+[OdooBIAgent] Response length: 45
+[OdooBIAgent/Validation] Result: {"isClean":true,"hasFakeNames":false,"hasWrongPeriod":false,"fakeNamesFound":[],"realNames":[]}
+[OdooBIAgent] Validation: 1ms
+[OdooBIAgent] === Total time: 5022ms ===
+ POST /api/internal/chat-test 200 in 10.6s (compile: 156ms, render: 10.4s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-002-1768249196417 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 8 }, history: { erp: 4 }, combined: { erp: 28 } }
+[Router] Selected: odoo (high confidence, score: 28)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "dame top 10 por vendedor..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 2
+[OdooBIAgent] User message: dame top 10 por vendedor
+[OdooBIAgent] LLM first response: 1855ms
+[OdooBIAgent] Tool call #1: odoo_intelligent_query
+[OdooBIAgent] Tool execution: 2454ms
+[OdooBIAgent] LLM response with tool result: 2458ms
+[OdooBIAgent] Response length: 438
+[StrictValidator] Absurd total amount: $24,301,724,423,801.027
+[OdooBIAgent/Validation] Result: {"isClean":false,"hasFakeNames":false,"hasWrongPeriod":false,"fakeNamesFound":[],"realNames":["Sin asignar","Martín Travella C.","Maico Moyano","Berenice Roth","Maria Inés Salomon"]}
+[OdooBIAgent/Validation] HALLUCINATION DETECTED: [ 'Monto absurdo detectado - posible error de consulta o datos' ]
+[OdooBIAgent/Validation] Using clean response from tool data
+[OdooBIAgent] Validation: 7ms
+[OdooBIAgent] === Total time: 6777ms ===
+[OdooBIAgent] Hallucination corrected, returning clean response
+ POST /api/internal/chat-test 200 in 8.9s (compile: 2ms, render: 8.9s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-003-1768249206863 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 6 }, history: { erp: 4 }, combined: { erp: 22 } }
+[Router] Selected: odoo (high confidence, score: 22)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "top 10 por cliente?..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 2
+[OdooBIAgent] User message: top 10 por cliente?
+[OdooBIAgent] LLM first response: 1781ms
+[OdooBIAgent] Tool call #1: odoo_intelligent_query
+[OdooBIAgent] Tool execution: 2624ms
+[OdooBIAgent] LLM response with tool result: 2768ms
+[OdooBIAgent] Response length: 517
+[StrictValidator] Absurd total amount: $24,280,089,471,861.57
+[OdooBIAgent/Validation] Result: {"isClean":false,"hasFakeNames":false,"hasWrongPeriod":false,"fakeNamesFound":[],"realNames":["Public User","Ministerio de Salud de Santa Fe","Consumidor Final Anonimo","Universidad de Buenos Aires","Polyquímica"]}
+[OdooBIAgent/Validation] HALLUCINATION DETECTED: [ 'Monto absurdo detectado - posible error de consulta o datos' ]
+[OdooBIAgent/Validation] Using clean response from tool data
+[OdooBIAgent] Validation: 2ms
+[OdooBIAgent] === Total time: 7176ms ===
+[OdooBIAgent] Hallucination corrected, returning clean response
+ POST /api/internal/chat-test 200 in 12.3s (compile: 3ms, render: 12.3s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-001-1768305320334 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 4 }, history: {}, combined: { erp: 12 } }
+[Router] Selected: odoo (high confidence, score: 12)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "ventas primera semana de dicie..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 0
+[OdooBIAgent] User message: ventas primera semana de diciembre 2025?
+[OdooBIAgent] LLM first response: 1214ms
+[OdooBIAgent] Tool call #1: odoo_intelligent_query
+[OdooBIAgent] Tool execution: 1248ms
+[OdooBIAgent] LLM response with tool result: 788ms
+[OdooBIAgent] Response length: 45
+[OdooBIAgent/Validation] Result: {"isClean":true,"hasFakeNames":false,"hasWrongPeriod":false,"fakeNamesFound":[],"realNames":[]}
+[OdooBIAgent] Validation: 1ms
+[OdooBIAgent] === Total time: 3253ms ===
+ POST /api/internal/chat-test 200 in 6.8s (compile: 181ms, render: 6.7s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-002-1768305328704 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 8 }, history: { erp: 4 }, combined: { erp: 28 } }
+[Router] Selected: odoo (high confidence, score: 28)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "dame top 10 por vendedor..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 2
+[OdooBIAgent] User message: dame top 10 por vendedor
+[OdooBIAgent] LLM first response: 1478ms
+[OdooBIAgent] Tool call #1: odoo_intelligent_query
+[OdooBIAgent] Tool execution: 1316ms
+[OdooBIAgent] LLM response with tool result: 1996ms
+[OdooBIAgent] Response length: 418
+[StrictValidator] Absurd total amount: $24,301,724,423,801.027
+[OdooBIAgent/Validation] Result: {"isClean":false,"hasFakeNames":false,"hasWrongPeriod":false,"fakeNamesFound":[],"realNames":["Sin asignar","Martín Travella C.","Maico Moyano","Berenice Roth","Maria Inés Salomon"]}
+[OdooBIAgent/Validation] HALLUCINATION DETECTED: [ 'Monto absurdo detectado - posible error de consulta o datos' ]
+[OdooBIAgent/Validation] Using clean response from tool data
+[OdooBIAgent] Validation: 2ms
+[OdooBIAgent] === Total time: 4796ms ===
+[OdooBIAgent] Hallucination corrected, returning clean response
+ POST /api/internal/chat-test 200 in 6.9s (compile: 2ms, render: 6.9s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-003-1768305337082 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 6 }, history: { erp: 4 }, combined: { erp: 22 } }
+[Router] Selected: odoo (high confidence, score: 22)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "top 10 por cliente?..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 2
+[OdooBIAgent] User message: top 10 por cliente?
+[OdooBIAgent] LLM first response: 1194ms
+[OdooBIAgent] Tool call #1: odoo_intelligent_query
+[OdooBIAgent] Tool execution: 1383ms
+[OdooBIAgent] LLM response with tool result: 1891ms
+[OdooBIAgent] Response length: 504
+[StrictValidator] Absurd total amount: $24,280,089,471,861.57
+[OdooBIAgent/Validation] Result: {"isClean":false,"hasFakeNames":false,"hasWrongPeriod":false,"fakeNamesFound":[],"realNames":["Public User","Ministerio de Salud de Santa Fe","Consumidor Final Anonimo","Universidad de Buenos Aires","Polyquímica"]}
+[OdooBIAgent/Validation] HALLUCINATION DETECTED: [ 'Monto absurdo detectado - posible error de consulta o datos' ]
+[OdooBIAgent/Validation] Using clean response from tool data
+[OdooBIAgent] Validation: 1ms
+[OdooBIAgent] === Total time: 4472ms ===
+[OdooBIAgent] Hallucination corrected, returning clean response
+ POST /api/internal/chat-test 200 in 8.5s (compile: 3ms, render: 8.5s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-001-1768305387446 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 8 }, history: {}, combined: { erp: 24 } }
+[Router] Selected: odoo (high confidence, score: 24)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "Total de ventas primera semana..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 0
+[OdooBIAgent] User message: Total de ventas primera semana de diciembre 2025?
+[OdooBIAgent] LLM first response: 1343ms
+[OdooBIAgent] Tool call #1: odoo_intelligent_query
+[OdooBIAgent] Tool execution: 1406ms
+[OdooBIAgent] LLM response with tool result: 867ms
+[OdooBIAgent] Response length: 77
+[OdooBIAgent/Validation] Result: {"isClean":true,"hasFakeNames":false,"hasWrongPeriod":false,"fakeNamesFound":[],"realNames":[]}
+[OdooBIAgent] Validation: 0ms
+[OdooBIAgent] === Total time: 3618ms ===
+ POST /api/internal/chat-test 200 in 7.0s (compile: 3ms, render: 6.9s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-002-1768305395938 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 8 }, history: { erp: 4 }, combined: { erp: 28 } }
+[Router] Selected: odoo (high confidence, score: 28)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "dame top 10 por vendedor..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 2
+[OdooBIAgent] User message: dame top 10 por vendedor
+[OdooBIAgent] LLM first response: 1540ms
+[OdooBIAgent] Tool call #1: odoo_intelligent_query
+[OdooBIAgent] Tool execution: 263ms
+[OdooBIAgent] LLM response with tool result: 1914ms
+[OdooBIAgent] Response length: 420
+[StrictValidator] Absurd total amount: $24,301,724,423,801.027
+[OdooBIAgent/Validation] Result: {"isClean":false,"hasFakeNames":false,"hasWrongPeriod":false,"fakeNamesFound":[],"realNames":["Sin asignar","Martín Travella C.","Maico Moyano","Berenice Roth","Maria Inés Salomon"]}
+[OdooBIAgent/Validation] HALLUCINATION DETECTED: [ 'Monto absurdo detectado - posible error de consulta o datos' ]
+[OdooBIAgent/Validation] Using clean response from tool data
+[OdooBIAgent] Validation: 1ms
+[OdooBIAgent] === Total time: 3720ms ===
+[OdooBIAgent] Hallucination corrected, returning clean response
+ POST /api/internal/chat-test 200 in 5.9s (compile: 1610µs, render: 5.9s)
+[TestChat] Starting test e2e-spicy-aggregation-check-SPICY-003-1768305403383 for tenant de7ef34a-12bd-4fe9-9d02-3d876a9393c2
+[Router] Message scores: { current: { erp: 6 }, history: { erp: 4 }, combined: { erp: 22 } }
+[Router] Selected: odoo (high confidence, score: 22)
+[TestChat] Routing: odoo (high)
+[RAG] Generating embedding for query: "top 10 por cliente?..."
+[RAG] Embedding generated. Calling match_documents RPC...
+[RAG] match_documents returned 0 results
+[OdooBIAgent] === Starting Single-Call Flow ===
+[OdooBIAgent] History length: 2
+[OdooBIAgent] User message: top 10 por cliente?
+[OdooBIAgent] LLM first response: 1519ms
+[OdooBIAgent] Tool call #1: odoo_intelligent_query
+[OdooBIAgent] Tool execution: 363ms
+[OdooBIAgent] LLM response with tool result: 2901ms
+[OdooBIAgent] Response length: 487
+[StrictValidator] Absurd total amount: $24,280,089,471,861.57
+[OdooBIAgent/Validation] Result: {"isClean":false,"hasFakeNames":false,"hasWrongPeriod":false,"fakeNamesFound":[],"realNames":["Public User","Ministerio de Salud de Santa Fe","Consumidor Final Anonimo","Universidad de Buenos Aires","Polyquímica"]}
+[OdooBIAgent/Validation] HALLUCINATION DETECTED: [ 'Monto absurdo detectado - posible error de consulta o datos' ]
+[OdooBIAgent/Validation] Using clean response from tool data
+[OdooBIAgent] Validation: 1ms
+[OdooBIAgent] === Total time: 4788ms ===
+[OdooBIAgent] Hallucination corrected, returning clean response
+ POST /api/internal/chat-test 200 in 7.1s (compile: 2ms, render: 7.1s)

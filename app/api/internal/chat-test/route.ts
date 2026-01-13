@@ -115,7 +115,9 @@ export async function POST(req: NextRequest) {
             }))
 
             for await (const chunk of streamChatWithOdoo(tenantId, '', inputContent, history)) {
-                response += chunk
+                if (typeof chunk === 'string') {
+                    response += chunk
+                }
             }
             toolsUsed.push('odoo_intelligent_query')
         } else {

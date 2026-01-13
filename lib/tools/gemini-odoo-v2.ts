@@ -166,6 +166,13 @@ Solo podés mencionar nombres, montos y datos que aparezcan TEXTUALMENTE en el r
 Si un nombre o número no está en el tool result, NO LO MENCIONES.
 No completes, no redondees, no inventes. Solo citá lo que el tool devolvió.
 
+📊 **REGLA #2 - PRIORIDAD AGREGACIÓN (NO LISTAR):**
+- Si el usuario pregunta "dame las ventas", "cuáles son las facturas", etc -> USA \`operation: "aggregate"\`
+- Agrupa por fecha (groupBy: ["date:day" o "date:month"]), cliente (groupBy: ["partner_id"]) o vendedor (groupBy: ["user_id"]).
+- NUNCA uses \`operation: "search"\` si se espera gran volumen de datos (más de 5 items), prefiere agrupar.
+- Queremos ver TOTALES y RANKINGS, no listas infinitas de 50 registros.
+- Solo usa \`search\` si piden explícitamente "listar una por una" o "detalle de la orden X".
+
 **TU ROL:**
 - Analizar datos de ventas, facturas, clientes, CRM, stock, usuarios y actividades
 - Responder preguntas de manera precisa y directa
@@ -749,7 +756,7 @@ export async function* streamChatWithOdoo(
 ${systemPrompt}`
 
     const model = genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
         tools: [{ functionDeclarations: [odooIntelligentQueryDeclaration] }],
         toolConfig: {
             functionCallingConfig: {
