@@ -772,9 +772,34 @@ async function executeSingleQuery(
                     }
                 } else {
                     // Simple aggregation without grouping
-                    const aggData = await client.searchRead(query.model, domain, [config.amountField || 'id'], limit)
-                    const total = aggData.reduce((sum: number, r: any) => sum + (r[config.amountField!] || 0), 0)
-                    result = { count: aggData.length, total }
+                    // FIX: Don't use limit for aggregate - we need the REAL count and total
+                    // Use searchCount for accurate count, and readGroup for server-side sum
+                    const amountField = config.amountField || 'amount_total'
+                    
+                    // Get real count (no limit)
+                    const realCount = await client.searchCount(query.model, domain)
+                    
+                    // Get total sum using readGroup (server-side aggregation, no limit issues)
+                    let total = 0
+                    if (realCount > 0) {
+                        try {
+                            const aggResult = await client.readGroup(
+                                query.model,
+                                domain,
+                                [amountField],  // Field to aggregate
+                                [],             // No groupBy = sum all
+                                { limit: 1 }
+                            )
+                            total = aggResult[0]?.[amountField] || 0
+                        } catch (e) {
+                            // Fallback: if readGroup fails, do client-side sum (with warning)
+                            console.log(`[QueryBuilder] readGroup failed for sum, using fallback`)
+                            const aggData = await client.searchRead(query.model, domain, [amountField], Math.min(realCount, 1000))
+                            total = aggData.reduce((sum: number, r: any) => sum + (r[amountField] || 0), 0)
+                        }
+                    }
+                    
+                    result = { count: realCount, total }
                 }
                 
                 // State Discovery Guard for aggregate

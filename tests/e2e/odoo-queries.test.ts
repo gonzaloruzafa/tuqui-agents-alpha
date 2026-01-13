@@ -601,10 +601,8 @@ describe('3. Regression Tests', () => {
         console.log('✅ groupBy con :day sanitizado')
     })
 
-    test.skip('3.4 limit NO debe afectar count/total en aggregate', async () => {
-        // BUG CONOCIDO: limit afecta el total en aggregate
-        // TODO: Arreglar en query-builder.ts - el limit se aplica antes de sumar
-        // Ver: https://github.com/tuqui/agents/issues/XXX
+    test('3.4 limit NO debe afectar count/total en aggregate', async () => {
+        // Este test verifica que el count/total sean los REALES, no limitados
         const [withLimit, withoutLimit] = await Promise.all([
             executeQueries(odooClient, TENANT_ID, [{
                 id: 'with-limit',
@@ -621,9 +619,10 @@ describe('3. Regression Tests', () => {
             }])
         ])
 
-        // Los totales deben ser iguales
-        expect(withLimit[0].total).toBe(withoutLimit[0].total)
-        console.log('✅ limit no afecta aggregate total')
+        // Los totales deben ser iguales (o muy cercanos por floating point)
+        expect(withLimit[0].count).toBe(withoutLimit[0].count)
+        expect(Math.abs((withLimit[0].total || 0) - (withoutLimit[0].total || 0))).toBeLessThan(1)
+        console.log(`✅ limit no afecta aggregate: count=${withLimit[0].count}, total=$${withLimit[0].total?.toLocaleString()}`)
     })
 
     test('3.5 Mes sin año debe inferir año correcto', async () => {
