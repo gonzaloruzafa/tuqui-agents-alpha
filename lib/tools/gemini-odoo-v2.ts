@@ -61,6 +61,13 @@ export interface OdooToolResult {
     }
     insights?: Insight[]
     chartData?: ChartData
+    stateWarning?: {
+        message: string
+        field: string
+        distribution: Record<string, number>
+        totalRecords: number
+        suggestion: string
+    }
     cached?: boolean
     executionMs?: number
     query_metadata?: Array<{
