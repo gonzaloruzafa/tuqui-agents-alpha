@@ -283,6 +283,17 @@ export const MODEL_CONFIG: Record<string, {
             'cancelad': 'cancel', 'cancel': 'cancel'
         }
     },
+    'purchase.order.line': {
+        dateField: 'create_date',
+        amountField: 'price_subtotal',
+        stateField: 'state',
+        defaultFields: ['product_id', 'product_qty', 'price_unit', 'price_subtotal', 'order_id', 'state'],
+        states: {
+            'confirmad': 'purchase', 'compra': 'purchase', 'purchase': 'purchase',
+            'hecho': 'done', 'done': 'done',
+            'cancelad': 'cancel', 'cancel': 'cancel'
+        }
+    },
 }
 
 // ============================================
