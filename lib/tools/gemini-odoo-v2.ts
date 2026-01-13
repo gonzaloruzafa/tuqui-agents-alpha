@@ -828,6 +828,7 @@ ${systemPrompt}`
 
         const { name, args } = functionCall.functionCall
         console.log(`[OdooBIAgent] Tool call #${i + 1}: ${name}`)
+        console.log(`[OdooBIAgent] Tool args:`, JSON.stringify(args, null, 2))
 
         // Track the tool call
         collectedToolCalls.push({ name, args })

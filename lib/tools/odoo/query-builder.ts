@@ -602,6 +602,12 @@ async function executeSingleQuery(
         const domain = query.domain || (query.filters ? buildDomain(query.filters, query.model, query.dateRange) : [])
         const fields = query.fields || config.defaultFields
         const limit = Math.min(query.limit || 50, 500) // Max 500 records
+        
+        // Debug logging
+        console.log(`[QueryBuilder] Model: ${query.model}, Operation: ${query.operation}`)
+        console.log(`[QueryBuilder] Filters: ${query.filters || 'none'}`)
+        console.log(`[QueryBuilder] DateRange:`, query.dateRange || 'none')
+        console.log(`[QueryBuilder] Domain:`, JSON.stringify(domain))
 
         let result: Partial<QueryResult> = {}
 
@@ -618,7 +624,9 @@ async function executeSingleQuery(
                 // State Discovery Guard for count
                 if (STATEFUL_MODELS.includes(query.model) && config.stateField && !hasStateFilter(domain, config.stateField)) {
                     const { distribution, totalRecords } = await getStateDistribution(client, query.model, domain, config.stateField)
-                    if (Object.keys(distribution).length > 1) {
+                    console.log(`[StateGuard] Distribution for ${query.model}:`, distribution, `Total: ${totalRecords}`)
+                    
+                    if (Object.keys(distribution).length > 0) {
                         result.stateWarning = buildStateWarning(query.model, config.stateField, distribution, totalRecords)
                     }
                 }
@@ -686,7 +694,11 @@ async function executeSingleQuery(
                 // State Discovery Guard for aggregate
                 if (STATEFUL_MODELS.includes(query.model) && config.stateField && !hasStateFilter(domain, config.stateField)) {
                     const { distribution, totalRecords } = await getStateDistribution(client, query.model, domain, config.stateField)
-                    if (Object.keys(distribution).length > 1) {
+                    console.log(`[StateGuard] Distribution for ${query.model}:`, distribution, `Total: ${totalRecords}`)
+                    
+                    // Show warning if multiple states OR if we got results (even with 1 state)
+                    // This ensures the LLM knows what states are being included
+                    if (Object.keys(distribution).length > 0) {
                         result.stateWarning = buildStateWarning(query.model, config.stateField, distribution, totalRecords)
                     }
                 }
