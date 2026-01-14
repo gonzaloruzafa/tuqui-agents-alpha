@@ -528,8 +528,9 @@ export function buildDomain(filters: string, model: string, dateRange?: { start:
     // ---- "DESDE [MES]" FILTER - Must be BEFORE month filter to catch "desde julio" before "julio" ----
     // "Desde [mes] del año pasado" / "since [month] last year"
     // Example: "desde julio del año pasado" -> from July last year to now
+    // Fix: support "desde el 1 de julio" -> ignore "el 1 de" to just get month
     const desdeMesMatch = !dateMatched && filters.match(
-        /desde\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i
+        /desde\s+(?:el\s+\d+\s+de\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i
     )
     if (desdeMesMatch) {
         const monthName = desdeMesMatch[1].toLowerCase()
@@ -782,7 +783,12 @@ async function executeSingleQuery(
     }
 
     try {
-        const config = MODEL_CONFIG[query.model] || { dateField: 'create_date', defaultFields: [] }
+        // Fix: Sanitize model name to ensure config lookup works and use it for buildDomain
+        const modelKey = query.model ? query.model.trim() : query.model
+        query.model = modelKey // Update model in query object to ensure Odoo client receives clean string
+
+        const config = MODEL_CONFIG[modelKey] || { dateField: 'create_date', defaultFields: [] }
+
         // Build domain: use explicit domain, or build from filters/dateRange
         // IMPORTANT: Apply dateRange even if filters is empty
         let domain = query.domain || []
@@ -790,8 +796,9 @@ async function executeSingleQuery(
         // Check if user explicitly mentioned state in filters (before building domain)
         const filtersHasState = query.filters && /state\s*[:=]/i.test(query.filters)
         
-        if (!query.domain && (query.filters || query.dateRange)) {
-            domain = buildDomain(query.filters || '', query.model, query.dateRange)
+        // Fix: Treat empty array as no domain, so we can build it from filters
+        if ((!query.domain || query.domain.length === 0) && (query.filters || query.dateRange)) {
+            domain = buildDomain(query.filters || '', modelKey, query.dateRange)
         }
         
         // ============================================
