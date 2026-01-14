@@ -980,9 +980,33 @@ async function executeSingleQuery(
                     // If all groupBy fields were removed, fall through to simple aggregation
                     if (sanitizedGroupBy.length === 0) {
                         console.log(`[QueryBuilder] All groupBy fields were invalid, falling back to simple aggregation`)
-                        const aggData = await client.searchRead(query.model, domain, [config.amountField || 'id'], limit)
-                        const total = aggData.reduce((sum: number, r: any) => sum + (r[config.amountField!] || 0), 0)
-                        result = { count: aggData.length, total }
+                        
+                        // FIX: Use readGroup without groupBy to get REAL total (not limited searchRead)
+                        const amountField = config.amountField
+                        if (amountField) {
+                            try {
+                                const totalResult = await client.readGroup(
+                                    query.model,
+                                    domain,
+                                    [amountField],
+                                    [],  // No groupBy = sum all records
+                                    { limit: 1 }
+                                )
+                                const realTotal = totalResult[0]?.[amountField] || 0
+                                const realCount = await client.searchCount(query.model, domain)
+                                console.log(`[QueryBuilder] Simple aggregation: count=${realCount}, total=${realTotal}`)
+                                result = { count: realCount, total: realTotal }
+                            } catch (e) {
+                                console.error(`[QueryBuilder] readGroup failed, falling back to searchRead:`, e)
+                                const aggData = await client.searchRead(query.model, domain, [amountField], limit)
+                                const total = aggData.reduce((sum: number, r: any) => sum + (r[amountField] || 0), 0)
+                                result = { count: aggData.length, total }
+                            }
+                        } else {
+                            // No amount field - just count
+                            const realCount = await client.searchCount(query.model, domain)
+                            result = { count: realCount, total: 0 }
+                        }
                     } else {
                         // Build aggregate fields - only add :sum if we have an amount field
                         const aggregateFields = hasAmountField
