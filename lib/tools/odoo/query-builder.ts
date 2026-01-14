@@ -110,8 +110,13 @@ export function clearCache(): void {
 // Detects queries without state filter and auto-discovers state distribution
 // ============================================
 
-// Models that have state fields and need guard protection
-const STATEFUL_MODELS = ['sale.order', 'sale.order.line', 'purchase.order', 'purchase.order.line', 'account.move', 'stock.picking', 'account.payment']
+// Helper: Get models that have autoFilterStates (derived from MODEL_CONFIG)
+function getStatefulModels(): string[] {
+    // Esta función se llama después de que MODEL_CONFIG está definido
+    return Object.entries(MODEL_CONFIG)
+        .filter(([_, config]) => config.autoFilterStates && config.autoFilterStates.length > 0)
+        .map(([model]) => model)
+}
 
 function hasStateFilter(domain: any[], stateField: string = 'state'): boolean {
     if (!Array.isArray(domain)) return false
@@ -190,6 +195,7 @@ export const MODEL_CONFIG: Record<string, {
     dateField: string
     amountField?: string
     stateField?: string
+    autoFilterStates?: string[]  // Estados a filtrar automáticamente (declarativo)
     defaultFields: string[]
     states?: Record<string, string>
 }> = {
@@ -197,6 +203,7 @@ export const MODEL_CONFIG: Record<string, {
         dateField: 'date_order',
         amountField: 'amount_total',
         stateField: 'state',
+        autoFilterStates: ['sale', 'sent', 'done'],  // Ventas confirmadas + enviadas
         defaultFields: ['name', 'partner_id', 'date_order', 'amount_total', 'state', 'user_id', 'company_id'],
         states: {
             // presupuesto/cotización = draft
@@ -212,6 +219,7 @@ export const MODEL_CONFIG: Record<string, {
         dateField: 'invoice_date',
         amountField: 'amount_residual',
         stateField: 'state',
+        autoFilterStates: ['posted'],  // Solo facturas publicadas
         defaultFields: ['name', 'partner_id', 'invoice_date', 'amount_total', 'amount_residual', 'state', 'payment_state', 'move_type', 'company_id'],
         states: {
             'publicad': 'posted', 'posted': 'posted', 'confirmad': 'posted',
@@ -232,6 +240,7 @@ export const MODEL_CONFIG: Record<string, {
         dateField: 'date_order',
         amountField: 'amount_total',
         stateField: 'state',
+        autoFilterStates: ['purchase', 'done'],  // Compras confirmadas
         defaultFields: ['name', 'partner_id', 'date_order', 'amount_total', 'state', 'company_id'],
         states: {
             'confirmad': 'purchase', 'borrador': 'draft', 'cancelad': 'cancel'
@@ -255,6 +264,7 @@ export const MODEL_CONFIG: Record<string, {
         dateField: 'create_date',
         amountField: 'price_subtotal',
         stateField: 'state',
+        autoFilterStates: ['sale', 'sent', 'done'],  // Líneas de ventas confirmadas
         defaultFields: ['product_id', 'product_uom_qty', 'price_unit', 'price_subtotal', 'order_id', 'state', 'company_id'],
         states: {
             'confirmad': 'sale', 'venta': 'sale', 'sale': 'sale',
@@ -266,6 +276,7 @@ export const MODEL_CONFIG: Record<string, {
         dateField: 'date',
         amountField: 'amount',
         stateField: 'state',
+        autoFilterStates: ['posted'],  // Solo pagos publicados
         defaultFields: ['name', 'partner_id', 'date', 'amount', 'payment_type', 'state', 'journal_id', 'company_id'],
         states: {
             'publicad': 'posted', 'posted': 'posted', 'confirmad': 'posted',
@@ -288,6 +299,7 @@ export const MODEL_CONFIG: Record<string, {
         dateField: 'create_date',
         amountField: 'price_subtotal',
         stateField: 'state',
+        autoFilterStates: ['purchase', 'done'],  // Líneas de compras confirmadas
         defaultFields: ['product_id', 'product_qty', 'price_unit', 'price_subtotal', 'order_id', 'state', 'company_id'],
         states: {
             'confirmad': 'purchase', 'compra': 'purchase', 'purchase': 'purchase',
@@ -303,6 +315,7 @@ export const MODEL_CONFIG: Record<string, {
         dateField: 'date',
         amountField: 'price_total',
         stateField: 'state',
+        autoFilterStates: ['sale', 'done'],  // Solo ventas confirmadas (no sent en report)
         defaultFields: ['partner_id', 'product_id', 'user_id', 'date', 'price_total', 'product_uom_qty', 'state', 'company_id'],
         states: {
             'confirmad': 'sale', 'venta': 'sale', 'sale': 'sale',
@@ -314,6 +327,7 @@ export const MODEL_CONFIG: Record<string, {
         dateField: 'date_order',
         amountField: 'price_total',
         stateField: 'state',
+        autoFilterStates: ['purchase', 'done'],  // Solo compras confirmadas
         defaultFields: ['partner_id', 'product_id', 'date_order', 'price_total', 'qty_ordered', 'state', 'company_id'],
         states: {
             'confirmad': 'purchase', 'compra': 'purchase', 'purchase': 'purchase',
@@ -325,6 +339,7 @@ export const MODEL_CONFIG: Record<string, {
         dateField: 'invoice_date',
         amountField: 'price_subtotal',
         stateField: 'state',
+        autoFilterStates: ['posted'],  // Solo facturas publicadas
         defaultFields: ['partner_id', 'product_id', 'invoice_date', 'move_type', 'price_subtotal', 'state', 'payment_state', 'company_id'],
         states: {
             'publicad': 'posted', 'posted': 'posted', 'confirmad': 'posted',
@@ -743,36 +758,21 @@ async function executeSingleQuery(
         }
         
         // ============================================
-        // AUTO-APPLY DEFAULT STATE FILTERS
+        // AUTO-APPLY DEFAULT STATE FILTERS (DECLARATIVO)
+        // Usa config.autoFilterStates si está definido
         // "Ventas" siempre significa confirmadas, salvo que pida "presupuestos"
-        // ONLY if user didn't explicitly specify a state filter
         // ============================================
         const stateField = config.stateField || 'state'
         const hasExplicitStateFilter = hasStateFilter(domain, stateField) || filtersHasState
         
-        if (!hasExplicitStateFilter) {
-            // Auto-apply confirmed states for sales
-            if (query.model === 'sale.order' || query.model === 'sale.order.line') {
-                // sale.order states: draft=presupuesto, sent=enviado, sale=confirmado, done=hecho, cancel=cancelado
-                // "ventas" = sale (confirmadas) + sent (cotizaciones enviadas)
-                domain.push(['state', 'in', ['sale', 'sent']])
-                console.log('[QueryBuilder] Auto-applied state filter for sales: state IN [sale, sent]')
+        if (!hasExplicitStateFilter && config.autoFilterStates && config.autoFilterStates.length > 0) {
+            // Usar la configuración declarativa del modelo
+            if (config.autoFilterStates.length === 1) {
+                domain.push([stateField, '=', config.autoFilterStates[0]])
+            } else {
+                domain.push([stateField, 'in', config.autoFilterStates])
             }
-            // Auto-apply posted states for invoices
-            else if (query.model === 'account.move') {
-                domain.push(['state', '=', 'posted'])
-                console.log('[QueryBuilder] Auto-applied state filter for invoices: state = posted')
-            }
-            // Auto-apply confirmed states for purchases
-            else if (query.model === 'purchase.order' || query.model === 'purchase.order.line') {
-                domain.push(['state', 'in', ['purchase', 'done']])
-                console.log('[QueryBuilder] Auto-applied state filter for purchases: state IN [purchase, done]')
-            }
-            // Auto-apply posted states for payments
-            else if (query.model === 'account.payment') {
-                domain.push(['state', '=', 'posted'])
-                console.log('[QueryBuilder] Auto-applied state filter for payments: state = posted')
-            }
+            console.log(`[QueryBuilder] Auto-filter ${query.model}: ${stateField} IN [${config.autoFilterStates.join(', ')}]`)
         }
         
         const fields = query.fields || config.defaultFields
@@ -796,8 +796,9 @@ async function executeSingleQuery(
                 const count = await client.searchCount(query.model, domain)
                 result = { count }
                 
-                // State Discovery Guard for count
-                if (STATEFUL_MODELS.includes(query.model) && config.stateField && !hasStateFilter(domain, config.stateField)) {
+                // State Discovery Guard for count (usa modelos con autoFilterStates)
+                const statefulModels = getStatefulModels()
+                if (statefulModels.includes(query.model) && config.stateField && !hasStateFilter(domain, config.stateField)) {
                     const { distribution, totalRecords } = await getStateDistribution(client, query.model, domain, config.stateField)
                     console.log(`[StateGuard] Distribution for ${query.model}:`, distribution, `Total: ${totalRecords}`)
                     
@@ -949,9 +950,10 @@ async function executeSingleQuery(
                     result = { count: realCount, total }
                 }
                 
-                // State Discovery Guard for aggregate
+                // State Discovery Guard for aggregate (usa modelos con autoFilterStates)
+                const statefulModelsAgg = getStatefulModels()
                 console.log(`[StateGuard] Checking model ${query.model}, stateField: ${config.stateField}, hasStateFilter: ${hasStateFilter(domain, config.stateField || 'state')}`)
-                if (STATEFUL_MODELS.includes(query.model) && config.stateField && !hasStateFilter(domain, config.stateField)) {
+                if (statefulModelsAgg.includes(query.model) && config.stateField && !hasStateFilter(domain, config.stateField)) {
                     const { distribution, totalRecords } = await getStateDistribution(client, query.model, domain, config.stateField)
                     console.log(`[StateGuard] Distribution for ${query.model}:`, distribution, `Total: ${totalRecords}`)
                     
