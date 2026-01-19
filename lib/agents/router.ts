@@ -336,9 +336,12 @@ export async function routeMessage(
 
     // 3. Analizar mensaje actual con más peso que historial
     const currentMessageScores = analyzeMessage(message)
-    const historyContext = conversationHistory.slice(-2).join(' ')
+
+    // CONTEXT FIX: Aumentar ventana de contexto de 2 a 10 mensajes para mejor persistencia
+    // Esto previene que aclaraciones cortas ("Al reporte", "Diciembre 2025") pierdan contexto ERP
+    const historyContext = conversationHistory.slice(-10).join(' ')
     const historyScores = analyzeMessage(historyContext)
-    
+
     // Mensaje actual pesa 3x más que historial
     const scores: Record<string, number> = {}
     for (const [specialty, score] of Object.entries(currentMessageScores)) {

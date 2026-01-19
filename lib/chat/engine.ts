@@ -137,6 +137,7 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
 
         if (channel === 'whatsapp') {
             systemPrompt += '\n\nREGLA PARA WHATSAPP: Sé conciso. Formato Markdown simple (negritas, listas). Máximo 1500 caracteres por mensaje.'
+            systemPrompt += '\n\nIMPORTANTE: Estás en una conversación fluida. Usa siempre los mensajes anteriores para entender referencias como "él", "eso", "ahora", "Al reporte", "Diciembre 2025" o "qué productos?". No pidas aclaraciones si el contexto ya está en el historial.'
         }
 
         // 4. RAG Context (using effective agent config)

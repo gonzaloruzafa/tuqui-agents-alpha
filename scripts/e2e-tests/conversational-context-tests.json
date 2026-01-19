@@ -299,6 +299,67 @@
           "timeoutMs": 15000
         }
       ]
+    },
+    {
+      "id": "CONV_WHATSAPP_001",
+      "category": "CONTEXT_SALES",
+      "name": "WhatsApp: Aclaraciones cortas sin keywords (CRÍTICO - Bug Reportado)",
+      "priority": "critical",
+      "expectedBehavior": {
+        "routing": "Debe mantener agente 'odoo' incluso con mensajes ultra-cortos sin keywords",
+        "toolExecution": "NO debe preguntar período repetidamente si ya fue especificado",
+        "dataConsistency": "Debe extraer período del historial cuando mensaje no lo menciona"
+      },
+      "turns": [
+        {
+          "turn": 1,
+          "message": "Que productos de 3M se vendieron en diciembre?",
+          "expectedAgent": "odoo",
+          "shouldContain": ["producto", "3M"],
+          "shouldNotSay": ["no puedo", "no tengo acceso"],
+          "mustExecuteTool": "odoo_intelligent_query",
+          "timeoutMs": 15000,
+          "saveContext": {
+            "key": "periodo_especificado",
+            "extractPattern": "(diciembre)"
+          }
+        },
+        {
+          "turn": 2,
+          "message": "Al reporte",
+          "expectedAgent": "odoo",
+          "shouldNotSay": ["¿En qué período?", "¿Qué período?", "no tengo acceso"],
+          "mustExecuteTool": "odoo_intelligent_query",
+          "contextAware": true,
+          "mustUseContext": "periodo_especificado",
+          "timeoutMs": 15000
+        },
+        {
+          "turn": 3,
+          "message": "Diciembre 2025",
+          "expectedAgent": "odoo",
+          "shouldContain": ["producto", "$"],
+          "shouldNotSay": ["¿En qué período?", "¿Qué te gustaría saber?"],
+          "mustExecuteTool": "odoo_intelligent_query",
+          "contextAware": true,
+          "timeoutMs": 15000,
+          "saveContext": {
+            "key": "periodo_refinado",
+            "extractPattern": "(diciembre 2025)"
+          }
+        },
+        {
+          "turn": 4,
+          "message": "Que productos vendimos",
+          "expectedAgent": "odoo",
+          "shouldContain": ["producto", "$"],
+          "shouldNotSay": ["¿En qué período?"],
+          "mustExecuteTool": "odoo_intelligent_query",
+          "contextAware": true,
+          "mustUseContext": "periodo_refinado",
+          "timeoutMs": 15000
+        }
+      ]
     }
   ],
   "performanceBaselines": {
