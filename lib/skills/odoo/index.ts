@@ -15,6 +15,7 @@ export { getSalesBySeller } from './get-sales-by-seller';
 export { getTopProducts } from './get-top-products';
 export { getTopCustomers } from './get-top-customers';
 export { getProductSalesHistory } from './get-product-sales-history';
+export { getPendingSaleOrders } from './get-pending-sale-orders';
 
 // Invoice/Debt Skills
 export { getDebtByCustomer, type GetDebtByCustomerInput, type GetDebtByCustomerOutput } from './get-debt-by-customer';
@@ -72,9 +73,10 @@ import { getCustomerBalance } from './get-customer-balance';
 import { getCashBalance } from './get-cash-balance';
 import { getAccountsReceivable } from './get-accounts-receivable';
 import { compareSalesPeriods } from './compare-sales-periods';
+import { getPendingSaleOrders } from './get-pending-sale-orders';
 
 export const odooSkills = [
-  // Sales (8)
+  // Sales (9)
   getSalesTotal,
   getSalesByCustomer,
   getSalesByProduct,
@@ -82,7 +84,8 @@ export const odooSkills = [
   getTopProducts,
   getTopCustomers,
   getProductSalesHistory,
-  compareSalesPeriods, // NEW
+  compareSalesPeriods,
+  getPendingSaleOrders, // NEW
   // Invoices/Debt (3)
   getDebtByCustomer,
   getInvoicesByCustomer,

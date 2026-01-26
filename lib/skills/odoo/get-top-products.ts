@@ -35,7 +35,7 @@ export const getTopProducts: Skill<
   TopProductsOutput
 > = {
   name: 'get_top_products',
-  description: 'Get top-selling products by revenue or quantity. Use for "best sellers", "top products", "what sells most".',
+  description: 'Get top-selling products by revenue or quantity. Use for "productos más vendidos", "best sellers", "top products", "what sells most", "qué vendemos más". Defaults to top 10 by revenue.',
   tool: 'odoo',
   tags: ['sales', 'products', 'reporting'],
   inputSchema: GetTopProductsInputSchema,

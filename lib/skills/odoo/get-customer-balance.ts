@@ -32,7 +32,7 @@ export const getCustomerBalance: Skill<
   CustomerBalanceOutput
 > = {
   name: 'get_customer_balance',
-  description: 'Get customer account balance (receivables). Use for "customer balance", "accounts receivable", "who owes us".',
+  description: 'Get customer account balance (receivables). Use for "saldo de cliente", "cuánto nos debe", "customer balance", "accounts receivable", "who owes us", "quién nos debe más".',
   tool: 'odoo',
   tags: ['accounting', 'receivables', 'customers'],
   inputSchema: GetCustomerBalanceInputSchema,

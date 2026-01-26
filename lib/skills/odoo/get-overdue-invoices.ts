@@ -70,7 +70,7 @@ export const getOverdueInvoices: Skill<
   OverdueInvoicesOutput
 > = {
   name: 'get_overdue_invoices',
-  description: 'Get overdue customer invoices. Use when user asks about "overdue invoices", "late payments", "unpaid invoices", "debt collection".',
+  description: 'Get overdue customer invoices. Use for "facturas vencidas", "pagos atrasados", "overdue invoices", "late payments", "unpaid invoices", "deudores morosos", "debt collection".',
   tool: 'odoo',
   tags: ['invoices', 'debt', 'collections', 'accounting'],
   inputSchema: GetOverdueInvoicesInputSchema,

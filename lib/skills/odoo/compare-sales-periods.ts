@@ -13,7 +13,7 @@
 import { z } from 'zod'
 import type { Skill, SkillContext, SkillResult, Period } from '../types'
 import { PeriodSchema, DocumentStateSchema, success, authError } from '../types'
-import { createOdooClient, dateRange, stateFilter, combineDomains, type OdooDomain } from './_client'
+import { createOdooClient, dateRange, stateFilter, combineDomains, getDefaultPeriod, getPreviousMonthPeriod, type OdooDomain } from './_client'
 import { errorToResult } from '../errors'
 
 // ============================================
@@ -21,10 +21,10 @@ import { errorToResult } from '../errors'
 // ============================================
 
 export const CompareSalesPeriodsInputSchema = z.object({
-  /** Current period to analyze */
-  currentPeriod: PeriodSchema,
-  /** Previous period to compare against */
-  previousPeriod: PeriodSchema,
+  /** Current period to analyze (defaults to this month) */
+  currentPeriod: PeriodSchema.optional(),
+  /** Previous period to compare against (defaults to last month) */
+  previousPeriod: PeriodSchema.optional(),
   /** Filter by order state */
   state: DocumentStateSchema.default('confirmed'),
   /** Include breakdown by product */
@@ -139,6 +139,10 @@ Returns totals, changes, and percentage variations.`,
 
     try {
       const odoo = createOdooClient(context.credentials.odoo)
+      
+      // Use defaults if periods not provided
+      const currentPeriod = input.currentPeriod || getDefaultPeriod()
+      const previousPeriod = input.previousPeriod || getPreviousMonthPeriod()
 
       // Helper to get period summary
       async function getPeriodSummary(period: Period): Promise<PeriodSummary> {
@@ -175,8 +179,8 @@ Returns totals, changes, and percentage variations.`,
 
       // Get both period summaries in parallel
       const [current, previous] = await Promise.all([
-        getPeriodSummary(input.currentPeriod),
-        getPeriodSummary(input.previousPeriod),
+        getPeriodSummary(currentPeriod),
+        getPeriodSummary(previousPeriod),
       ])
 
       // Calculate changes
@@ -195,8 +199,8 @@ Returns totals, changes, and percentage variations.`,
       // Product comparison if requested
       let productComparison: ComparisonItem[] | undefined
       if (input.includeProducts) {
-        const currentDateDomain = dateRange('order_id.date_order', input.currentPeriod.start, input.currentPeriod.end)
-        const previousDateDomain = dateRange('order_id.date_order', input.previousPeriod.start, input.previousPeriod.end)
+        const currentDateDomain = dateRange('order_id.date_order', currentPeriod.start, currentPeriod.end)
+        const previousDateDomain = dateRange('order_id.date_order', previousPeriod.start, previousPeriod.end)
         const stateDomain = stateFilter(input.state, 'sale.order')
         const stateOnOrder = stateDomain.map((f) => ['order_id.' + f[0], f[1], f[2]] as [string, string, any])
 
@@ -245,8 +249,8 @@ Returns totals, changes, and percentage variations.`,
       // Customer comparison if requested
       let customerComparison: ComparisonItem[] | undefined
       if (input.includeCustomers) {
-        const currentDateDomain = dateRange('date_order', input.currentPeriod.start, input.currentPeriod.end)
-        const previousDateDomain = dateRange('date_order', input.previousPeriod.start, input.previousPeriod.end)
+        const currentDateDomain = dateRange('date_order', currentPeriod.start, currentPeriod.end)
+        const previousDateDomain = dateRange('date_order', previousPeriod.start, previousPeriod.end)
         const stateDomain = stateFilter(input.state, 'sale.order')
 
         const [currentCustomers, previousCustomers] = await Promise.all([

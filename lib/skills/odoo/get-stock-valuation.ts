@@ -25,7 +25,7 @@ export const getStockValuation: Skill<
   StockValuationOutput
 > = {
   name: 'get_stock_valuation',
-  description: 'Get total stock valuation. Use for "inventory value", "stock value", "asset value".',
+  description: 'Get total stock valuation. Use for "cuánto vale el inventario", "valor del stock", "inventory value", "stock value", "asset value", "valuación de stock". Returns total value of all inventory.',
   tool: 'odoo',
   tags: ['inventory', 'stock', 'valuation'],
   inputSchema: GetStockValuationInputSchema,

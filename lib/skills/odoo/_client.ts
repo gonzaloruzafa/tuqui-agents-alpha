@@ -444,6 +444,23 @@ export function getDefaultPeriod(): { start: string; end: string; label: string 
 }
 
 /**
+ * Get previous month period
+ */
+export function getPreviousMonthPeriod(): { start: string; end: string; label: string } {
+  const now = new Date();
+  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const year = prevMonth.getFullYear();
+  const month = String(prevMonth.getMonth() + 1).padStart(2, '0');
+  const lastDay = new Date(year, prevMonth.getMonth() + 1, 0).getDate();
+  
+  return {
+    start: `${year}-${month}-01`,
+    end: `${year}-${month}-${String(lastDay).padStart(2, '0')}`,
+    label: 'Mes pasado'
+  };
+}
+
+/**
  * Build a state filter for documents
  */
 export function stateFilter(
