@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { marked } from 'marked'
 import { VoiceChat } from '@/components/chat/VoiceChat'
+import { ThinkingIndicator } from '@/components/chat/ThinkingIndicator'
 
 // Configure marked to open external links in new tab
 const renderer = new marked.Renderer()
@@ -640,7 +641,7 @@ export default function ChatPage() {
                                 )}
                             </div>
                         ))}
-                        {isLoading && <div className="flex gap-2 items-center text-gray-400 text-sm ml-12"><Loader2 className="w-4 h-4 animate-spin" /> Generando...</div>}
+                        {isLoading && <ThinkingIndicator />}
                         <div ref={messagesEndRef} />
                     </div>
                 </div>
