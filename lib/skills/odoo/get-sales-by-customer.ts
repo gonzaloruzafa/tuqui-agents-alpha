@@ -18,6 +18,7 @@ import {
   dateRange,
   stateFilter,
   combineDomains,
+  getDefaultPeriod,
   type OdooDomain,
 } from './_client';
 import { errorToResult } from '../errors';
@@ -28,7 +29,7 @@ import { errorToResult } from '../errors';
 
 export const GetSalesByCustomerInputSchema = z.object({
   /** Date period to query */
-  period: PeriodSchema,
+  period: PeriodSchema.optional(),
   /** Maximum number of customers to return */
   limit: z.number().min(1).max(100).default(10),
   /** Filter by order state */
@@ -103,10 +104,11 @@ Returns customer list with order count and total amount, sorted by total descend
 
     try {
       const odoo = createOdooClient(context.credentials.odoo);
+      const period = input.period || getDefaultPeriod();
 
       // 2. Build deterministic domain
       const domain: OdooDomain = combineDomains(
-        dateRange('date_order', input.period.start, input.period.end),
+        dateRange('date_order', period.start, period.end),
         stateFilter(input.state, 'sale.order')
       );
 
@@ -153,7 +155,7 @@ Returns customer list with order count and total amount, sorted by total descend
         grandTotal,
         totalOrders,
         customerCount: customers.length,
-        period: input.period,
+        period,
       });
     } catch (error) {
       return errorToResult(error);

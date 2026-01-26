@@ -18,6 +18,7 @@ import {
   dateRange,
   stateFilter,
   combineDomains,
+  getDefaultPeriod,
   type OdooDomain,
 } from './_client';
 import { errorToResult } from '../errors';
@@ -27,8 +28,8 @@ import { errorToResult } from '../errors';
 // ============================================
 
 export const GetSalesTotalInputSchema = z.object({
-  /** Date period to query */
-  period: PeriodSchema,
+  /** Date period to query (defaults to current month if not provided) */
+  period: PeriodSchema.optional(),
   /** Filter by order state */
   state: DocumentStateSchema.default('confirmed'),
   /** Include tax breakdown */
@@ -101,9 +102,12 @@ Returns total with/without taxes, order count, and average order value.`,
     try {
       const odoo = createOdooClient(context.credentials.odoo);
 
+      // Use default period (current month) if not provided
+      const period = input.period || getDefaultPeriod();
+
       // Build domain
       const domain: OdooDomain = combineDomains(
-        dateRange('date_order', input.period.start, input.period.end),
+        dateRange('date_order', period.start, period.end),
         stateFilter(input.state, 'sale.order')
       );
 
@@ -137,7 +141,7 @@ Returns total with/without taxes, order count, and average order value.`,
         orderCount,
         customerCount,
         avgOrderValue: orderCount > 0 ? totalWithTax / orderCount : 0,
-        period: input.period,
+        period,
       });
     } catch (error) {
       return errorToResult(error);

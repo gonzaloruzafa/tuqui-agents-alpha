@@ -7,11 +7,11 @@
 import { z } from 'zod';
 import type { Skill, SkillContext, SkillResult } from '../types';
 import { success, authError, PeriodSchema } from '../types';
-import { createOdooClient, dateRange, combineDomains } from './_client';
+import { createOdooClient, dateRange, combineDomains, getDefaultPeriod } from './_client';
 import { errorToResult } from '../errors';
 
 export const GetTopCustomersInputSchema = z.object({
-  period: PeriodSchema,
+  period: PeriodSchema.optional(),
   limit: z.number().int().min(1).max(100).default(10),
   minAmount: z.number().min(0).optional(),
 });
@@ -47,9 +47,10 @@ export const getTopCustomers: Skill<
 
     try {
       const odoo = createOdooClient(context.credentials.odoo);
+      const period = input.period || getDefaultPeriod();
 
       const domain = combineDomains(
-        dateRange('date_order', input.period.start, input.period.end),
+        dateRange('date_order', period.start, period.end),
         [['state', 'in', ['sale', 'done']]]
       );
 
@@ -84,7 +85,7 @@ export const getTopCustomers: Skill<
       return success({
         customers,
         totalRevenue: customers.reduce((sum, c) => sum + c.totalRevenue, 0),
-        period: input.period,
+        period,
       });
     } catch (error) {
       return errorToResult(error);
