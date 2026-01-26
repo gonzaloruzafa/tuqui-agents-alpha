@@ -9,12 +9,18 @@ import 'dotenv-flow/config';
 import { createOdooClient } from '@/lib/skills/odoo/_client';
 import type { OdooCredentials } from '@/lib/skills/types';
 
+// Credentials from environment variables - NEVER commit secrets!
 const credentials: OdooCredentials = {
-  url: 'https://trainp-cedent-26-01-1.adhoc.ar',
-  db: 'odoo',
-  username: 'fdelpazo',
-  apiKey: 'REDACTED_API_KEY',
+  url: process.env.ODOO_TEST_URL || '',
+  db: process.env.ODOO_TEST_DB || 'odoo',
+  username: process.env.ODOO_TEST_USERNAME || '',
+  apiKey: process.env.ODOO_TEST_API_KEY || '',
 };
+
+if (!credentials.url || !credentials.username || !credentials.apiKey) {
+  console.error('❌ Missing Odoo credentials. Set ODOO_TEST_URL, ODOO_TEST_USERNAME, ODOO_TEST_API_KEY');
+  process.exit(1);
+}
 
 async function verifyPurchases() {
   console.log('\n🔍 Verificando respuestas de compras vs datos reales de Odoo\n');
