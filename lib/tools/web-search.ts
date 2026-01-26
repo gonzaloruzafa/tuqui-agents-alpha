@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MLCache } from '@/lib/mercadolibre/cache'
 import { MLLinkValidator } from '@/lib/mercadolibre/link-validator'
+import { MeliSkills } from './web-search/meli-skills'
 
 /**
  * Unified Web Search Tool
@@ -386,7 +387,78 @@ Ejemplos:
         // Serper.dev devuelve links de productos reales (/articulo) vs listados (/listado)
         let result: any
 
-        if (isPrice && marketplace) {
+        if (isPrice && marketplace === 'mercadolibre.com.ar') {
+            // ========================================
+            // MERCADOLIBRE: Usar MeliSkills (híbrido)
+            // ========================================
+            console.log('[WebSearch] Using MeliSkills.hybrid for MercadoLibre search')
+
+            try {
+                const meliResult = await MeliSkills.hybrid(query, {
+                    maxResults: 5,
+                    useCache: true,
+                })
+
+                // Construir productos estructurados con precios
+                const products = meliResult.products.map((p, i) => ({
+                    numero: i + 1,
+                    titulo: p.title,
+                    precio: p.priceFormatted || 'Consultar',
+                    url_verificada: p.url,
+                    descripcion: p.snippet?.substring(0, 150) || ''
+                }))
+
+                const productsJSON = JSON.stringify(products, null, 2)
+
+                const hybridAnswer = `${meliResult.analysis}
+
+════════════════════════════════════════════════════════
+🛒 PRODUCTOS ENCONTRADOS (DATOS VERIFICADOS)
+════════════════════════════════════════════════════════
+
+${productsJSON}
+
+════════════════════════════════════════════════════════
+⚠️ INSTRUCCIONES OBLIGATORIAS PARA TU RESPUESTA:
+════════════════════════════════════════════════════════
+
+1. Usá ÚNICAMENTE las URLs del campo "url_verificada" de arriba
+2. Copiá la URL EXACTA - no modifiques ni un caracter
+3. Formato de link: [Ver en MercadoLibre](URL_EXACTA)
+4. Mostrá el precio del campo "precio" si está disponible
+5. Si no hay URL para algo, NO inventes - decí que no encontraste
+6. PROHIBIDO construir URLs como "articulo.mercadolibre.com.ar/MLA-XXXXX"
+
+❌ Si inventás una URL, el usuario verá ERROR 404`
+
+                result = {
+                    method: 'meli-hybrid',
+                    answer: hybridAnswer,
+                    sources: meliResult.products.map(p => ({
+                        title: p.title,
+                        url: p.url,
+                        snippet: p.snippet,
+                        price: p.priceFormatted
+                    })),
+                    searchQueries: [query]
+                }
+            } catch (meliError: any) {
+                console.error('[WebSearch] MeliSkills.hybrid failed, falling back to legacy:', meliError.message)
+                // Fallback to legacy Grounding + Serper
+                const [groundingRes, serperRes] = await Promise.all([
+                    searchWithGrounding(query, { site_filter: marketplace, max_results: 5 }),
+                    searchWithSerper(query, { site_filter: marketplace, max_results: 5 })
+                ])
+                const serperSources = serperRes.sources || []
+                const groundingText = groundingRes.answer || ''
+                result = {
+                    method: 'hybrid (grounding+serper) [fallback]',
+                    answer: groundingText,
+                    sources: serperSources,
+                    searchQueries: [...(groundingRes.searchQueries || []), ...(serperRes.searchQueries || [])]
+                }
+            }
+        } else if (isPrice && marketplace) {
             console.log('[WebSearch] Multi-source strategy: Grounding + Serper for marketplace prices')
             const [groundingRes, serperRes] = await Promise.all([
                 searchWithGrounding(query, {
