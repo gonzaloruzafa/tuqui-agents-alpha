@@ -1,9 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { MLCache } from '@/lib/mercadolibre/cache'
-import { MLLinkValidator } from '@/lib/mercadolibre/link-validator'
-import { MeliSkills } from './web-search/meli-skills'
+import { MLCache, MLLinkValidator, MeliSkills } from '@/lib/skills/web-search/mercadolibre'
 
 /**
  * Unified Web Search Tool
