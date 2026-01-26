@@ -118,6 +118,14 @@ export async function POST(req: Request) {
         // Add context persistence rule
         systemSystem += '\n\nIMPORTANTE: Estás en una conversación fluida. Usa siempre los mensajes anteriores para entender referencias como "él", "eso", "ahora", o "qué productos?". No pidas aclaraciones si el contexto ya está en el historial.'
 
+        // Add professional tool usage messaging
+        systemSystem += '\n\nCUANDO USES HERRAMIENTAS: Comunicate de forma profesional y natural. En lugar de mensajes técnicos como "🔍 Consultando: sale.report...", usa frases amigables como:\n' +
+            '- "Un momento, estoy buscando esa información..."\n' +
+            '- "Déjame consultar los datos..."\n' +
+            '- "Verificando en el sistema..."\n' +
+            '- "Analizando la información..."\n' +
+            'NUNCA menciones nombres técnicos de modelos, tablas o funciones. Mantené la conversación natural y profesional.'
+
         if (voiceMode) {
             systemSystem += '\n\nREGLA PARA VOZ: Sé extremadamente conciso. Respuestas de máximo 2 oraciones, tipo telegrama elegante. No des rodeos ni explicaciones largas excepto que te lo pidan explícitamente.'
         }

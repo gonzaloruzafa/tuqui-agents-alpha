@@ -140,6 +140,14 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
             systemPrompt += '\n\nIMPORTANTE: Estás en una conversación fluida. Usa siempre los mensajes anteriores para entender referencias como "él", "eso", "ahora", "Al reporte", "Diciembre 2025" o "qué productos?". No pidas aclaraciones si el contexto ya está en el historial.'
         }
 
+        // Add professional tool usage messaging
+        systemPrompt += '\n\nCUANDO USES HERRAMIENTAS: Comunicate de forma profesional y natural. En lugar de mensajes técnicos como "🔍 Consultando: sale.report...", usa frases amigables como:\n' +
+            '- "Un momento, estoy buscando esa información..."\n' +
+            '- "Déjame consultar los datos..."\n' +
+            '- "Verificando en el sistema..."\n' +
+            '- "Analizando la información..."\n' +
+            'NUNCA menciones nombres técnicos de modelos, tablas o funciones. Mantené la conversación natural y profesional.'
+
         // 4. RAG Context (using effective agent config)
         if (effectiveAgent.rag_enabled) {
             try {
