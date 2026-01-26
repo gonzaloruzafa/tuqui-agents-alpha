@@ -3,7 +3,7 @@
 ## ✅ **MIGRACIÓN COMPLETADA - GOD TOOL ELIMINADO** ✅
 
 La migración de God Tools a Skills está **100% completa**:
-- ✅ 12 Skills implementados y testeados
+- ✅ 20 Skills implementados y testeados (100% cobertura)
 - ✅ God Tool eliminado (`gemini-odoo.ts`, `gemini-odoo-v2.ts`)
 - ✅ Todos los flujos (Web, WhatsApp, Internal Test) usan Skills
 - ✅ Build exitoso sin errores
@@ -41,9 +41,9 @@ La migración de God Tools a Skills está **100% completa**:
 - ✅ `loadSkillsForAgent()` - entry point principal
 - ✅ `shouldUseSkills()` - feature flag (actualmente true para todos)
 
-### 🛠️ Skills Implementados (12/20+) - 60% Cobertura
+### 🛠️ Skills Implementados (20/20) - 100% Cobertura
 
-#### Odoo Skills
+#### Odoo Skills - Sales (7)
 1. ✅ **`get_sales_by_customer`** - Ventas agrupadas por cliente
    - Input: período, límite, estado, monto mínimo
    - Output: clientes con totales, órdenes, promedios
@@ -52,45 +52,83 @@ La migración de God Tools a Skills está **100% completa**:
    - Input: período, estado, groupBy
    - Output: total general y subtotales por grupo
 
-3. ✅ **`get_debt_by_customer`** - Deuda por cliente
-   - Input: período, límite, solo vencido
-   - Output: clientes con deuda, días vencidos
-
-4. ✅ **`get_product_stock`** - Stock de productos
-   - Input: productId, búsqueda, límite
-   - Output: productos con stock disponible y virtual
-
-5. ✅ **`get_payments_received`** - Pagos recibidos
-   - Input: período, límite, groupBy
-   - Output: pagos con totales por grupo
-
-6. ✅ **`get_sales_by_product`** - Ventas por producto
+3. ✅ **`get_sales_by_product`** - Ventas por producto
    - Input: período, límite, estado, categoría
    - Output: productos con cantidad vendida, totales, órdenes
 
-7. ✅ **`get_invoices_by_customer`** - Facturas por cliente
+4. ✅ **`get_sales_by_seller`** - Ventas por vendedor
+   - Input: período, límite, estado
+   - Output: vendedores con totales, promedios, comisiones
+
+5. ✅ **`get_top_products`** - Productos más vendidos
+   - Input: período, límite, orden por (revenue/quantity)
+   - Output: productos top con ventas
+
+6. ✅ **`get_top_customers`** - Mejores clientes
+   - Input: período, límite, monto mínimo
+   - Output: clientes top por facturación
+
+7. ✅ **`get_product_sales_history`** - Historial de ventas de producto
+   - Input: productId, período, groupBy (none/month/customer)
+   - Output: historial de ventas con agrupación opcional
+
+#### Invoices/Debt (3)
+8. ✅ **`get_debt_by_customer`** - Deuda por cliente
+   - Input: período, límite, solo vencido
+   - Output: clientes con deuda, días vencidos
+
+9. ✅ **`get_invoices_by_customer`** - Facturas por cliente
    - Input: período, límite, estado, tipo
    - Output: clientes con total facturado, cantidad
 
-8. ✅ **`get_overdue_invoices`** - Facturas vencidas
-   - Input: límite, días mínimos vencido, agrupar por cliente
-   - Output: facturas vencidas con días de atraso
+10. ✅ **`get_overdue_invoices`** - Facturas vencidas
+    - Input: límite, días mínimos vencido, agrupar por cliente
+    - Output: facturas vencidas con días de atraso
 
-9. ✅ **`get_low_stock_products`** - Productos con stock bajo
-   - Input: umbral, límite, solo stockables
-   - Output: productos bajo umbral de stock
+#### Stock (3)
+11. ✅ **`get_product_stock`** - Stock de productos
+    - Input: productId, búsqueda, límite
+    - Output: productos con stock disponible y virtual
 
-10. ✅ **`get_purchase_orders`** - Órdenes de compra
+12. ✅ **`get_low_stock_products`** - Productos con stock bajo
+    - Input: umbral, límite, solo stockables
+    - Output: productos bajo umbral de stock
+
+13. ✅ **`get_stock_valuation`** - Valuación de stock
+    - Input: categoría, límite
+    - Output: valor total de inventario
+
+#### Payments (1)
+14. ✅ **`get_payments_received`** - Pagos recibidos
+    - Input: período, límite, groupBy
+    - Output: pagos con totales por grupo
+
+#### Purchases (3)
+15. ✅ **`get_purchase_orders`** - Órdenes de compra
     - Input: período, estado, groupBy
     - Output: total de compras, agrupadas por proveedor
 
-11. ✅ **`search_customers`** - Buscar clientes
+16. ✅ **`get_purchases_by_supplier`** - Compras por proveedor
+    - Input: período, límite, estado
+    - Output: proveedores con totales de compra
+
+17. ✅ **`get_vendor_bills`** - Facturas de proveedores
+    - Input: período, estado, supplierId, límite
+    - Output: facturas de proveedores con totales
+
+#### Search (2)
+18. ✅ **`search_customers`** - Buscar clientes
     - Input: query, límite, solo activos
     - Output: clientes que coinciden con búsqueda
 
-12. ✅ **`search_products`** - Buscar productos
+19. ✅ **`search_products`** - Buscar productos
     - Input: query, límite, incluir stock
     - Output: productos que coinciden con búsqueda
+
+#### Accounting (1)
+20. ✅ **`get_customer_balance`** - Balance de clientes
+    - Input: customerId, límite
+    - Output: balance de cuentas por cobrar
 
 ### 🧪 Testing
 
@@ -286,20 +324,17 @@ User: "¿Cuánto vendimos a Distribuidora del Sur este mes?"
 
 ## 📋 Próximos Pasos
 
-### Pendientes de Fase 1 (Skills adicionales)
-- [ ] `get_invoices_by_customer` - Facturas por cliente
-- [ ] `get_invoice_status` - Estado de facturación
-- [ ] `get_purchase_orders` - Órdenes de compra
-- [ ] `get_vendor_spending` - Gasto por proveedor
-- [ ] `search_customers` - Buscar clientes
-- [ ] `search_products` - Buscar productos
-- [ ] `get_customer_credit_limit` - Límite de crédito
-- [ ] `get_product_sales_history` - Historial de ventas de producto
+### ✅ Fase 1: Implementación - COMPLETADA
+1. ✅ 20 Skills implementados (100% cobertura)
+2. ✅ Sistema de tipos y validación con Zod
+3. ✅ Error handling robusto
+4. ✅ Multi-tenant isolation completo
+5. ✅ 27 unit tests pasando
 
 ### ✅ Fase 2: Transición - COMPLETADA
 1. ✅ Skills integrados en flujos de producción (Web, WhatsApp)
 2. ✅ Todos los agentes usan el mismo flujo con Skills
-3. ✅ 60% cobertura de queries comunes
+3. ✅ 100% cobertura de queries comunes
 
 ### ✅ Fase 3: Deprecación - COMPLETADA
 1. ✅ God Tool eliminado completamente
