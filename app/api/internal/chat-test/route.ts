@@ -217,7 +217,8 @@ export async function POST(req: NextRequest) {
             quality: {
                 hasNumericData: /\$\s?[\d.,]+|\d+\s*(unidades|productos|ventas|pesos|facturas|clientes)/i.test(response),
                 hasList: response.includes('- ') || response.includes('• ') || /^\d+\./m.test(response),
-                hasError: /error|no pude|no encontré|disculpá|no hay datos/i.test(response),
+                // More precise error detection - avoid false positives like "errores en los registros"
+                hasError: /hubo un (error|problema)|no pude (acceder|obtener|consultar)|error al (buscar|consultar)|disculpá.*no (pude|puedo)|no hay datos disponibles|problema técnico/i.test(response),
                 usedContext: messages.length > 1 && !/(qué|cuál|a qué te refer)/i.test(response)
             }
         }

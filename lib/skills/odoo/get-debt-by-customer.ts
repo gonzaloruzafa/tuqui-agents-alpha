@@ -80,9 +80,9 @@ export const getDebtByCustomer: Skill<
   name: 'get_debt_by_customer',
 
   description: `Get outstanding debt grouped by customer.
-Use when user asks: "who owes us", "customer debt", "accounts receivable",
-"deudas", "quién nos debe", "cuentas por cobrar", "saldos pendientes".
-Returns customers with unpaid invoice amounts, sorted by total debt descending.`,
+Use for: "quién nos debe más", "clientes morosos", "who owes us", "customer debt", 
+"accounts receivable", "deudas de clientes", "quién nos debe", "cuentas por cobrar", 
+"saldos pendientes", "deudores principales". Returns customers with unpaid invoice amounts.`,
 
   tool: 'odoo',
 
