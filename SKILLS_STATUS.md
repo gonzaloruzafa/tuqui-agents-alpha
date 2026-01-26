@@ -163,7 +163,7 @@ El sistema de Skills está **100% operativo en producción**:
 
 #### Limitaciones Conocidas (MVP)
 - ⚠️ Extracción de precios desde snippets es limitada
-  - **Solución**: Usar `web_investigator` para extraer de páginas completas
+  - **Solución**: MeliSkills.hybrid() combina Serper + Grounding para mejor precisión
   - **Alternativa**: API oficial de MercadoLibre (requiere OAuth)
 - ✅ URLs validadas correctamente (solo productos directos)
 - ✅ Caché funcional (reduce latencia en búsquedas repetidas)

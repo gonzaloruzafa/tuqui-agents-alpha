@@ -158,7 +158,7 @@ async function testToolsLoad(): Promise<any> {
     if (!TEST_TENANT_ID) return { skipped: true, reason: 'No TEST_TENANT_ID configured' }
     
     // Test loading web tools
-    const webTools = await getToolsForAgent(TEST_TENANT_ID, ['web_search', 'web_investigator'])
+    const webTools = await getToolsForAgent(TEST_TENANT_ID, ['web_search'])
     const webToolNames = Object.keys(webTools)
     
     // Test loading odoo tools

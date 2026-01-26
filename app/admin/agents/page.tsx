@@ -27,7 +27,7 @@ export default function AdminAgentsPage() {
         description: '',
         systemPrompt: '',
         ragEnabled: true,
-        tools: ['web_search', 'web_investigator'] as string[]
+        tools: ['web_search'] as string[]
     })
 
     const fetchAgents = async () => {
@@ -63,7 +63,7 @@ export default function AdminAgentsPage() {
                     description: '',
                     systemPrompt: '',
                     ragEnabled: true,
-                    tools: ['web_search', 'web_investigator']
+                    tools: ['web_search']
                 })
                 fetchAgents()
             } else {

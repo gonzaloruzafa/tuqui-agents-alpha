@@ -105,7 +105,7 @@ export async function POST(request: Request) {
                 description: description?.trim() || null,
                 system_prompt: systemPrompt?.trim() || null,
                 rag_enabled: ragEnabled ?? true,
-                tools: tools || ['web_search', 'web_investigator'],
+                tools: tools || ['web_search'],
                 is_active: true,
                 master_agent_id: null // Custom agent, not synced from master
             })
