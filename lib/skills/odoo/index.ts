@@ -41,6 +41,13 @@ export { searchProducts } from './search-products';
 // Accounting Skills
 export { getCustomerBalance } from './get-customer-balance';
 
+// Treasury Skills
+export { getCashBalance, type GetCashBalanceInput, type GetCashBalanceOutput } from './get-cash-balance';
+export { getAccountsReceivable, type GetAccountsReceivableInput, type GetAccountsReceivableOutput } from './get-accounts-receivable';
+
+// Comparison Skills
+export { compareSalesPeriods, type CompareSalesPeriodsInput, type CompareSalesPeriodsOutput } from './compare-sales-periods';
+
 // Skill array for registration
 import { getSalesTotal } from './get-sales-total';
 import { getSalesByCustomer } from './get-sales-by-customer';
@@ -62,9 +69,12 @@ import { getVendorBills } from './get-vendor-bills';
 import { searchCustomers } from './search-customers';
 import { searchProducts } from './search-products';
 import { getCustomerBalance } from './get-customer-balance';
+import { getCashBalance } from './get-cash-balance';
+import { getAccountsReceivable } from './get-accounts-receivable';
+import { compareSalesPeriods } from './compare-sales-periods';
 
 export const odooSkills = [
-  // Sales (7)
+  // Sales (8)
   getSalesTotal,
   getSalesByCustomer,
   getSalesByProduct,
@@ -72,6 +82,7 @@ export const odooSkills = [
   getTopProducts,
   getTopCustomers,
   getProductSalesHistory,
+  compareSalesPeriods, // NEW
   // Invoices/Debt (3)
   getDebtByCustomer,
   getInvoicesByCustomer,
@@ -89,6 +100,8 @@ export const odooSkills = [
   // Search (2)
   searchCustomers,
   searchProducts,
-  // Accounting (1)
+  // Accounting/Treasury (3)
   getCustomerBalance,
+  getCashBalance, // NEW
+  getAccountsReceivable, // NEW
 ];
