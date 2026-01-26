@@ -32,6 +32,13 @@ describe('Skill: get_overdue_invoices', () => {
     searchRead: vi.fn(),
   };
 
+  // Valid input with all required fields populated with defaults
+  const validInput = {
+    limit: 20,
+    minDaysOverdue: 0,
+    groupByCustomer: false,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(clientModule.createOdooClient).mockReturnValue(mockOdooClient as any);
@@ -61,7 +68,7 @@ describe('Skill: get_overdue_invoices', () => {
   describe('Authentication', () => {
     it('returns AUTH_ERROR when credentials missing', async () => {
       const result = await getOverdueInvoices.execute(
-        {},
+        validInput,
         { ...mockContext, credentials: {} }
       );
       expect(result.success).toBe(false);
@@ -75,7 +82,7 @@ describe('Skill: get_overdue_invoices', () => {
     it('returns empty list when no overdue invoices', async () => {
       mockOdooClient.searchRead.mockResolvedValue([]);
 
-      const result = await getOverdueInvoices.execute({}, mockContext);
+      const result = await getOverdueInvoices.execute(validInput, mockContext);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -108,7 +115,7 @@ describe('Skill: get_overdue_invoices', () => {
         },
       ]);
 
-      const result = await getOverdueInvoices.execute({}, mockContext);
+      const result = await getOverdueInvoices.execute(validInput, mockContext);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -133,7 +140,7 @@ describe('Skill: get_overdue_invoices', () => {
         },
       ]);
 
-      const result = await getOverdueInvoices.execute({}, mockContext);
+      const result = await getOverdueInvoices.execute(validInput, mockContext);
 
       // Just verify the skill executes successfully
       expect(result.success).toBe(true);
@@ -142,7 +149,7 @@ describe('Skill: get_overdue_invoices', () => {
     it('handles API errors gracefully', async () => {
       mockOdooClient.searchRead.mockRejectedValue(new Error('Connection error'));
 
-      const result = await getOverdueInvoices.execute({}, mockContext);
+      const result = await getOverdueInvoices.execute(validInput, mockContext);
 
       expect(result.success).toBe(false);
       if (!result.success) {

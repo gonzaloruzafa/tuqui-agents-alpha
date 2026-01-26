@@ -12,7 +12,7 @@
 import { z } from 'zod';
 import type { Skill, SkillContext, SkillResult } from '../types';
 import { success, authError, PeriodSchema, DocumentStateSchema } from '../types';
-import { createOdooClient, dateRange, combineDomains } from './_client';
+import { createOdooClient, dateRange, combineDomains, getDefaultPeriod } from './_client';
 import { errorToResult } from '../errors';
 
 // ============================================
@@ -21,7 +21,7 @@ import { errorToResult } from '../errors';
 
 export const GetPurchaseOrdersInputSchema = z.object({
   /** Time period for analysis */
-  period: PeriodSchema,
+  period: PeriodSchema.optional(),
 
   /** Filter by order state */
   state: z.enum(['all', 'confirmed', 'draft', 'sent', 'done', 'cancel']).default('confirmed'),
@@ -71,10 +71,11 @@ export const getPurchaseOrders: Skill<
 
     try {
       const odoo = createOdooClient(context.credentials.odoo);
+      const period = input.period || getDefaultPeriod();
 
       // Build domain
       const domain = combineDomains(
-        dateRange('date_order', input.period.start, input.period.end)
+        dateRange('date_order', period.start, period.end)
       );
 
       // State filter
@@ -102,7 +103,7 @@ export const getPurchaseOrders: Skill<
         return success({
           totalAmount,
           orderCount,
-          period: input.period,
+          period,
         });
       } else {
         // Group by vendor or category
@@ -142,7 +143,7 @@ export const getPurchaseOrders: Skill<
           totalAmount,
           orderCount,
           groups,
-          period: input.period,
+          period,
         });
       }
     } catch (error) {

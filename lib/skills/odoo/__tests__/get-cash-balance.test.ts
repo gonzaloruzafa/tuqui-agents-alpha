@@ -37,6 +37,11 @@ describe('Skill: get_cash_balance', () => {
     readGroup: vi.fn(),
   };
 
+  // Valid input with all required fields populated with defaults
+  const validInput = {
+    includeBanks: false,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(clientModule.createOdooClient).mockReturnValue(mockOdooClient as any);
@@ -85,7 +90,7 @@ describe('Skill: get_cash_balance', () => {
         credentials: {},
       };
 
-      const result = await getCashBalance.execute({}, noCredsContext);
+      const result = await getCashBalance.execute(validInput, noCredsContext);
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -104,7 +109,7 @@ describe('Skill: get_cash_balance', () => {
       mockOdooClient.searchRead.mockResolvedValue([]);
       mockOdooClient.readGroup.mockResolvedValue([]);
 
-      const result = await getCashBalance.execute({}, mockContext);
+      const result = await getCashBalance.execute(validInput, mockContext);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -125,7 +130,7 @@ describe('Skill: get_cash_balance', () => {
       // Mock account move lines with balances - simple mock
       mockOdooClient.readGroup.mockResolvedValue([{ balance: 50000 }]);
 
-      const result = await getCashBalance.execute({ includeBanks: true }, mockContext);
+      const result = await getCashBalance.execute({ ...validInput, includeBanks: true }, mockContext);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -140,7 +145,7 @@ describe('Skill: get_cash_balance', () => {
     it('handles API errors gracefully', async () => {
       mockOdooClient.searchRead.mockRejectedValue(new Error('Connection refused'));
 
-      const result = await getCashBalance.execute({}, mockContext);
+      const result = await getCashBalance.execute(validInput, mockContext);
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -152,7 +157,7 @@ describe('Skill: get_cash_balance', () => {
       mockOdooClient.searchRead.mockResolvedValue([]);
       mockOdooClient.readGroup.mockResolvedValue([]);
 
-      await getCashBalance.execute({ includeBanks: true }, mockContext);
+      await getCashBalance.execute({ ...validInput, includeBanks: true }, mockContext);
 
       // Verify searchRead was called
       expect(mockOdooClient.searchRead).toHaveBeenCalled();

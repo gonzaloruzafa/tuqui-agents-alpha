@@ -37,6 +37,13 @@ describe('Skill: get_accounts_receivable', () => {
     readGroup: vi.fn(),
   };
 
+  // Default valid input with all required fields
+  const validInput = {
+    overdueOnly: false,
+    groupByCustomer: false,
+    limit: 20,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(clientModule.createOdooClient).mockReturnValue(mockOdooClient as any);
@@ -103,7 +110,7 @@ describe('Skill: get_accounts_receivable', () => {
         credentials: {},
       };
 
-      const result = await getAccountsReceivable.execute({}, noCredsContext);
+      const result = await getAccountsReceivable.execute(validInput, noCredsContext);
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -121,7 +128,7 @@ describe('Skill: get_accounts_receivable', () => {
     it('returns zero totals when no receivables exist', async () => {
       mockOdooClient.searchRead.mockResolvedValue([]);
 
-      const result = await getAccountsReceivable.execute({}, mockContext);
+      const result = await getAccountsReceivable.execute(validInput, mockContext);
 
       // Verify execution completes (mock may cause different behavior)
       expect(result).toBeDefined();
@@ -141,7 +148,7 @@ describe('Skill: get_accounts_receivable', () => {
         },
       ]);
 
-      const result = await getAccountsReceivable.execute({}, mockContext);
+      const result = await getAccountsReceivable.execute(validInput, mockContext);
 
       // Simply verify execution completes (mock may not match exact skill expectations)
       expect(result).toBeDefined();
@@ -151,7 +158,7 @@ describe('Skill: get_accounts_receivable', () => {
     it('filters only overdue when overdueOnly is true', async () => {
       mockOdooClient.searchRead.mockResolvedValue([]);
 
-      const result = await getAccountsReceivable.execute({ overdueOnly: true }, mockContext);
+      const result = await getAccountsReceivable.execute({ ...validInput, overdueOnly: true }, mockContext);
 
       // Simply verify execution completes
       expect(result).toBeDefined();
@@ -161,7 +168,7 @@ describe('Skill: get_accounts_receivable', () => {
     it('handles API errors gracefully', async () => {
       mockOdooClient.searchRead.mockRejectedValue(new Error('Connection timeout'));
 
-      const result = await getAccountsReceivable.execute({}, mockContext);
+      const result = await getAccountsReceivable.execute(validInput, mockContext);
 
       expect(result.success).toBe(false);
       if (!result.success) {

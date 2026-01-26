@@ -32,6 +32,13 @@ describe('Skill: search_products', () => {
     searchRead: vi.fn(),
   };
 
+  const validInput = {
+    query: 'test',
+    limit: 20,
+    includeStock: true,
+    saleableOnly: false,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(clientModule.createOdooClient).mockReturnValue(mockOdooClient as any);
@@ -69,7 +76,7 @@ describe('Skill: search_products', () => {
   describe('Authentication', () => {
     it('returns AUTH_ERROR when credentials missing', async () => {
       const result = await searchProducts.execute(
-        { query: 'test' },
+        validInput,
         { ...mockContext, credentials: {} }
       );
       expect(result.success).toBe(false);
@@ -83,7 +90,10 @@ describe('Skill: search_products', () => {
     it('returns empty list when no products match', async () => {
       mockOdooClient.searchRead.mockResolvedValue([]);
 
-      const result = await searchProducts.execute({ query: 'nonexistent' }, mockContext);
+      const result = await searchProducts.execute(
+        { ...validInput, query: 'nonexistent' },
+        mockContext
+      );
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -119,7 +129,10 @@ describe('Skill: search_products', () => {
         },
       ]);
 
-      const result = await searchProducts.execute({ query: 'Producto Test' }, mockContext);
+      const result = await searchProducts.execute(
+        { ...validInput, query: 'Producto Test' },
+        mockContext
+      );
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -131,7 +144,7 @@ describe('Skill: search_products', () => {
     it('searches by name and default_code', async () => {
       mockOdooClient.searchRead.mockResolvedValue([]);
 
-      await searchProducts.execute({ query: 'SKU001' }, mockContext);
+      await searchProducts.execute({ ...validInput, query: 'SKU001' }, mockContext);
 
       expect(mockOdooClient.searchRead).toHaveBeenCalled();
       const callArgs = mockOdooClient.searchRead.mock.calls[0];
@@ -141,7 +154,7 @@ describe('Skill: search_products', () => {
     it('respects limit parameter', async () => {
       mockOdooClient.searchRead.mockResolvedValue([]);
 
-      await searchProducts.execute({ query: 'test', limit: 5 }, mockContext);
+      await searchProducts.execute({ ...validInput, limit: 5 }, mockContext);
 
       const callArgs = mockOdooClient.searchRead.mock.calls[0];
       expect(callArgs[2].limit).toBe(5);
@@ -150,7 +163,7 @@ describe('Skill: search_products', () => {
     it('handles API errors gracefully', async () => {
       mockOdooClient.searchRead.mockRejectedValue(new Error('Database error'));
 
-      const result = await searchProducts.execute({ query: 'test' }, mockContext);
+      const result = await searchProducts.execute(validInput, mockContext);
 
       expect(result.success).toBe(false);
       if (!result.success) {

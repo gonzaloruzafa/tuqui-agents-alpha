@@ -1226,7 +1226,7 @@ describe('14. PROVEEDORES - Más preguntas de compras', () => {
 
         // Top proveedor
         const topSupplier = await odooClient.readGroup('purchase.order',
-            [['state', 'in', ['purchase', 'done']], ['date_order', '>=', ESTE_ANO.start]],
+            [['state', 'in', ['purchase', 'done']], ['date_order', '>=', ESTE_AÑO.start]],
             ['amount_total', 'partner_id'], ['partner_id'],
             { limit: 1, orderBy: 'amount_total desc' })
 

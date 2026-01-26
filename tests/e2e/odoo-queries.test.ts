@@ -21,8 +21,8 @@ import { executeQueries, MODEL_CONFIG, buildDomain } from '@/lib/tools/odoo/quer
 import { getOdooClient } from '@/lib/tools/odoo/client'
 
 // Environment-based tenant ID
-const TENANT_ID = process.env.TEST_TENANT_ID
-const SKIP_LIVE_TESTS = !TENANT_ID
+const TENANT_ID = process.env.TEST_TENANT_ID!
+const SKIP_LIVE_TESTS = !process.env.TEST_TENANT_ID
 
 if (SKIP_LIVE_TESTS) {
     console.log('⚠️  TEST_TENANT_ID not set - live Odoo tests will be skipped')
@@ -961,7 +961,7 @@ describe('3. Regression Tests', () => {
             model: 'account.move',
             operation: 'aggregate',
             dateRange,
-            filters: { move_type: 'out_invoice' },
+            domain: [['move_type', '=', 'out_invoice']],
             groupBy: ['partner_id'],
             limit: 100,
         }])
@@ -973,7 +973,7 @@ describe('3. Regression Tests', () => {
             model: 'account.move',
             operation: 'aggregate',
             dateRange,
-            filters: { move_type: 'in_invoice' },
+            domain: [['move_type', '=', 'in_invoice']],
         }])
         console.log(`   Facturas de Compra: $${(invoicesIn[0].total || 0).toLocaleString('es-AR')}`)
 
@@ -1159,11 +1159,11 @@ describe('3. Regression Tests', () => {
         console.log('\n📊 TUQUI (account.move):')
         const tuquiEsteMes = await executeQueries(odooClient, TENANT_ID, [{
             id: 'fac-este-mes', model: 'account.move', operation: 'aggregate',
-            dateRange: esteMes, filters: { move_type: 'out_invoice' }
+            dateRange: esteMes, domain: [['move_type', '=', 'out_invoice']]
         }])
         const tuquiMesPasado = await executeQueries(odooClient, TENANT_ID, [{
             id: 'fac-mes-pasado', model: 'account.move', operation: 'aggregate',
-            dateRange: mesPasado, filters: { move_type: 'out_invoice' }
+            dateRange: mesPasado, domain: [['move_type', '=', 'out_invoice']]
         }])
         console.log(`   Este mes: $${(tuquiEsteMes[0].total || 0).toLocaleString('es-AR')}`)
         console.log(`   Mes pasado: $${(tuquiMesPasado[0].total || 0).toLocaleString('es-AR')}`)
@@ -1203,7 +1203,7 @@ describe('3. Regression Tests', () => {
         console.log('\n📊 TUQUI (account.move con payment_state=not_paid):')
         const tuquiDeudores = await executeQueries(odooClient, TENANT_ID, [{
             id: 'deudores', model: 'account.move', operation: 'aggregate',
-            filters: { move_type: 'out_invoice', payment_state: 'not_paid' },
+            domain: [['move_type', '=', 'out_invoice'], ['payment_state', '=', 'not_paid']],
             groupBy: ['partner_id'], limit: 10
         }])
         console.log(`   Total por cobrar: $${(tuquiDeudores[0].total || 0).toLocaleString('es-AR')}`)
@@ -1550,7 +1550,7 @@ describe('3. Regression Tests', () => {
         // 3. Facturas Venta
         const tuquiFacturas = await executeQueries(odooClient, TENANT_ID, [{
             id: 'f', model: 'account.move', operation: 'aggregate', dateRange: periodo,
-            filters: { move_type: 'out_invoice' }
+            domain: [['move_type', '=', 'out_invoice']]
         }])
         const reportFacturas = await odooClient.readGroup('account.invoice.report',
             [['invoice_date', '>=', periodo.start], ['invoice_date', '<=', periodo.end],
@@ -1658,7 +1658,7 @@ describe('3. Regression Tests', () => {
         // Tuqui (account.move con in_invoice y not_paid)
         const tuquiResult = await executeQueries(odooClient, TENANT_ID, [{
             id: 'deuda-proveedores', model: 'account.move', operation: 'aggregate',
-            filters: { move_type: 'in_invoice', payment_state: 'not_paid' }
+            domain: [['move_type', '=', 'in_invoice'], ['payment_state', '=', 'not_paid']]
         }])
 
         // Odoo report
@@ -1687,7 +1687,7 @@ describe('3. Regression Tests', () => {
         // Tuqui
         const tuquiResult = await executeQueries(odooClient, TENANT_ID, [{
             id: 'cxc', model: 'account.move', operation: 'aggregate',
-            filters: { move_type: 'out_invoice', payment_state: 'not_paid' }
+            domain: [['move_type', '=', 'out_invoice'], ['payment_state', '=', 'not_paid']]
         }])
 
         // Odoo report

@@ -38,6 +38,11 @@ describe('Skill: get_top_customers', () => {
     readGroup: vi.fn(),
   };
 
+  const validInput = {
+    period: { start: '2025-01-01', end: '2025-01-31' },
+    limit: 10,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(clientModule.createOdooClient).mockReturnValue(mockOdooClient as any);
@@ -73,7 +78,7 @@ describe('Skill: get_top_customers', () => {
   describe('Authentication', () => {
     it('returns AUTH_ERROR when credentials missing', async () => {
       const result = await getTopCustomers.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         { ...mockContext, credentials: {} }
       );
       expect(result.success).toBe(false);
@@ -87,10 +92,7 @@ describe('Skill: get_top_customers', () => {
     it('returns empty list when no sales exist', async () => {
       mockOdooClient.readGroup.mockResolvedValue([]);
 
-      const result = await getTopCustomers.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
-        mockContext
-      );
+      const result = await getTopCustomers.execute(validInput, mockContext);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -107,7 +109,7 @@ describe('Skill: get_top_customers', () => {
       ]);
 
       const result = await getTopCustomers.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' }, limit: 3 },
+        { ...validInput, limit: 3 },
         mockContext
       );
 

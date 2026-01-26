@@ -38,6 +38,12 @@ describe('Skill: get_top_products', () => {
     readGroup: vi.fn(),
   };
 
+  const validInput = {
+    period: { start: '2025-01-01', end: '2025-01-31' },
+    limit: 10,
+    orderBy: 'revenue' as const,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(clientModule.createOdooClient).mockReturnValue(mockOdooClient as any);
@@ -74,7 +80,7 @@ describe('Skill: get_top_products', () => {
   describe('Authentication', () => {
     it('returns AUTH_ERROR when credentials missing', async () => {
       const result = await getTopProducts.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         { ...mockContext, credentials: {} }
       );
       expect(result.success).toBe(false);
@@ -88,10 +94,7 @@ describe('Skill: get_top_products', () => {
     it('returns empty list when no sales exist', async () => {
       mockOdooClient.readGroup.mockResolvedValue([]);
 
-      const result = await getTopProducts.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
-        mockContext
-      );
+      const result = await getTopProducts.execute(validInput, mockContext);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -107,7 +110,7 @@ describe('Skill: get_top_products', () => {
       ]);
 
       const result = await getTopProducts.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' }, limit: 3 },
+        { ...validInput, limit: 3 },
         mockContext
       );
 
@@ -121,10 +124,7 @@ describe('Skill: get_top_products', () => {
     it('handles API errors gracefully', async () => {
       mockOdooClient.readGroup.mockRejectedValue(new Error('Timeout'));
 
-      const result = await getTopProducts.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
-        mockContext
-      );
+      const result = await getTopProducts.execute(validInput, mockContext);
 
       expect(result.success).toBe(false);
       if (!result.success) {

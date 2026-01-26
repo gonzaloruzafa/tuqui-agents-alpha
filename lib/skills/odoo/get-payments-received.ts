@@ -17,6 +17,7 @@ import {
   createOdooClient,
   dateRange,
   combineDomains,
+  getDefaultPeriod,
   type OdooDomain,
   type DomainFilter,
 } from './_client';
@@ -28,7 +29,7 @@ import { errorToResult } from '../errors';
 
 export const GetPaymentsReceivedInputSchema = z.object({
   /** Date period to query */
-  period: PeriodSchema,
+  period: PeriodSchema.optional(),
   /** Group by payment method/journal */
   groupByJournal: z.boolean().default(false),
   /** Group by customer */
@@ -102,6 +103,7 @@ Can group by payment method or customer.`,
 
     try {
       const odoo = createOdooClient(context.credentials.odoo);
+      const period = input.period || getDefaultPeriod();
 
       // Build domain for inbound payments (collections)
       const baseDomain: DomainFilter[] = [
@@ -111,7 +113,7 @@ Can group by payment method or customer.`,
 
       let domain: OdooDomain = combineDomains(
         baseDomain,
-        dateRange('date', input.period.start, input.period.end)
+        dateRange('date', period.start, period.end)
       );
 
       // Filter by journal IDs if specified
@@ -194,7 +196,7 @@ Can group by payment method or customer.`,
         paymentCount,
         byJournal,
         byCustomer,
-        period: input.period,
+        period,
       });
     } catch (error) {
       return errorToResult(error);

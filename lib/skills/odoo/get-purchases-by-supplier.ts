@@ -7,11 +7,11 @@
 import { z } from 'zod';
 import type { Skill, SkillContext, SkillResult } from '../types';
 import { success, authError, PeriodSchema } from '../types';
-import { createOdooClient, dateRange, combineDomains } from './_client';
+import { createOdooClient, dateRange, combineDomains, getDefaultPeriod } from './_client';
 import { errorToResult } from '../errors';
 
 export const GetPurchasesBySupplierInputSchema = z.object({
-  period: PeriodSchema,
+  period: PeriodSchema.optional(),
   limit: z.number().int().min(1).max(100).default(10),
   state: z.enum(['all', 'confirmed', 'draft']).default('confirmed'),
 });
@@ -47,9 +47,10 @@ export const getPurchasesBySupplier: Skill<
 
     try {
       const odoo = createOdooClient(context.credentials.odoo);
+      const period = input.period || getDefaultPeriod();
 
       const domain = combineDomains(
-        dateRange('date_order', input.period.start, input.period.end)
+        dateRange('date_order', period.start, period.end)
       );
 
       if (input.state !== 'all') {
@@ -81,7 +82,7 @@ export const getPurchasesBySupplier: Skill<
         suppliers,
         grandTotal: suppliers.reduce((sum, s) => sum + s.totalAmount, 0),
         totalOrders: suppliers.reduce((sum, s) => sum + s.orderCount, 0),
-        period: input.period,
+        period,
       });
     } catch (error) {
       return errorToResult(error);

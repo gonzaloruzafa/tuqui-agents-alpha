@@ -12,7 +12,7 @@
 import { z } from 'zod';
 import type { Skill, SkillContext, SkillResult } from '../types';
 import { success, authError, PeriodSchema } from '../types';
-import { createOdooClient, dateRange, combineDomains } from './_client';
+import { createOdooClient, dateRange, combineDomains, getDefaultPeriod } from './_client';
 import { errorToResult } from '../errors';
 
 // ============================================
@@ -21,7 +21,7 @@ import { errorToResult } from '../errors';
 
 export const GetInvoicesByCustomerInputSchema = z.object({
   /** Time period for analysis */
-  period: PeriodSchema,
+  period: PeriodSchema.optional(),
 
   /** Maximum number of customers to return */
   limit: z.number().int().min(1).max(100).default(10),
@@ -74,10 +74,11 @@ export const getInvoicesByCustomer: Skill<
 
     try {
       const odoo = createOdooClient(context.credentials.odoo);
+      const period = input.period || getDefaultPeriod();
 
       // Build domain
       const domain = combineDomains(
-        dateRange('invoice_date', input.period.start, input.period.end)
+        dateRange('invoice_date', period.start, period.end)
       );
 
       // State filter
@@ -128,7 +129,7 @@ export const getInvoicesByCustomer: Skill<
         grandTotal,
         totalInvoices,
         customerCount: customers.length,
-        period: input.period,
+        period,
       });
     } catch (error) {
       return errorToResult(error);

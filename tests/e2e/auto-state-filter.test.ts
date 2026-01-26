@@ -296,6 +296,7 @@ describe.skipIf(SKIP_TESTS)('Auto State Filter - Validación', () => {
 
             // Usar executeQueries (el código que usa Tuqui) SIN especificar estado
             const result = await executeQueries(odoo, TENANT_ID!, [{
+                id: 'test-purchase-report-1',
                 model: 'purchase.report',
                 operation: 'aggregate',
                 groupBy: ['partner_id'],
@@ -321,6 +322,7 @@ describe.skipIf(SKIP_TESTS)('Auto State Filter - Validación', () => {
 
             // Usar executeQueries SIN especificar estado
             const result = await executeQueries(odoo, TENANT_ID!, [{
+                id: 'test-sale-report-1',
                 model: 'sale.report',
                 operation: 'aggregate',
                 groupBy: [],
@@ -346,6 +348,7 @@ describe.skipIf(SKIP_TESTS)('Auto State Filter - Validación', () => {
             const endDate = '2025-12-31'
 
             const result = await executeQueries(odoo, TENANT_ID!, [{
+                id: 'test-invoice-report-1',
                 model: 'account.invoice.report',
                 operation: 'aggregate',
                 groupBy: [],

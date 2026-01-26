@@ -52,6 +52,10 @@ describe('Skill: compare_sales_periods', () => {
       end: '2025-01-07',
       label: 'Semana pasada',
     },
+    state: 'confirmed' as const,
+    includeProducts: false,
+    includeCustomers: false,
+    limit: 5,
   };
 
   beforeEach(() => {

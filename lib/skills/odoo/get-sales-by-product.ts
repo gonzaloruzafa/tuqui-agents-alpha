@@ -12,7 +12,7 @@
 import { z } from 'zod';
 import type { Skill, SkillContext, SkillResult } from '../types';
 import { success, authError, PeriodSchema, DocumentStateSchema } from '../types';
-import { createOdooClient, dateRange, stateFilter, combineDomains } from './_client';
+import { createOdooClient, dateRange, stateFilter, combineDomains, getDefaultPeriod } from './_client';
 import { errorToResult } from '../errors';
 
 // ============================================
@@ -21,7 +21,7 @@ import { errorToResult } from '../errors';
 
 export const GetSalesByProductInputSchema = z.object({
   /** Time period for analysis */
-  period: PeriodSchema,
+  period: PeriodSchema.optional(),
 
   /** Maximum number of products to return (default: 10) */
   limit: z.number().int().min(1).max(100).default(10),
@@ -77,10 +77,11 @@ export const getSalesByProduct: Skill<
 
     try {
       const odoo = createOdooClient(context.credentials.odoo);
+      const period = input.period || getDefaultPeriod();
 
       // Build domain
       const domain = combineDomains(
-        dateRange('date_order', input.period.start, input.period.end),
+        dateRange('date_order', period.start, period.end),
         stateFilter(input.state, 'sale.order')
       );
 
@@ -132,7 +133,7 @@ export const getSalesByProduct: Skill<
         totalQuantity,
         totalOrders,
         productCount: products.length,
-        period: input.period,
+        period,
       });
     } catch (error) {
       return errorToResult(error);

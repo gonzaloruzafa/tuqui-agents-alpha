@@ -44,6 +44,13 @@ describe('Skill: get_sales_by_customer', () => {
     searchCount: vi.fn(),
   };
 
+  // Valid input with all required fields populated with defaults
+  const validInput = {
+    period: { start: '2025-01-01', end: '2025-01-31' },
+    limit: 10,
+    state: 'confirmed' as const,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(clientModule.createOdooClient).mockReturnValue(mockOdooClient as any);
@@ -126,7 +133,7 @@ describe('Skill: get_sales_by_customer', () => {
       };
 
       const result = await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         noCredsContext
       );
 
@@ -144,7 +151,7 @@ describe('Skill: get_sales_by_customer', () => {
       };
 
       const result = await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         noOdooContext
       );
 
@@ -164,7 +171,7 @@ describe('Skill: get_sales_by_customer', () => {
       mockOdooClient.readGroup.mockResolvedValue([]);
 
       await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         mockContext
       );
 
@@ -191,12 +198,12 @@ describe('Skill: get_sales_by_customer', () => {
       };
 
       await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         tenantAContext
       );
 
       await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         tenantBContext
       );
 
@@ -215,7 +222,7 @@ describe('Skill: get_sales_by_customer', () => {
 
       await getSalesByCustomer.execute(
         {
-          period: { start: '2025-01-01', end: '2025-01-31' },
+          ...validInput,
           state: 'confirmed',
         },
         mockContext
@@ -239,7 +246,7 @@ describe('Skill: get_sales_by_customer', () => {
 
       await getSalesByCustomer.execute(
         {
-          period: { start: '2025-01-01', end: '2025-01-31' },
+          ...validInput,
           state: 'draft',
         },
         mockContext
@@ -260,7 +267,7 @@ describe('Skill: get_sales_by_customer', () => {
 
       await getSalesByCustomer.execute(
         {
-          period: { start: '2025-01-01', end: '2025-01-31' },
+          ...validInput,
           limit: 5,
         },
         mockContext
@@ -285,7 +292,7 @@ describe('Skill: get_sales_by_customer', () => {
       mockOdooClient.readGroup.mockResolvedValue([]);
 
       const result = await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         mockContext
       );
 
@@ -306,7 +313,7 @@ describe('Skill: get_sales_by_customer', () => {
       ]);
 
       const result = await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         mockContext
       );
 
@@ -333,7 +340,7 @@ describe('Skill: get_sales_by_customer', () => {
       ]);
 
       const result = await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         mockContext
       );
 
@@ -353,7 +360,7 @@ describe('Skill: get_sales_by_customer', () => {
 
       const result = await getSalesByCustomer.execute(
         {
-          period: { start: '2025-01-01', end: '2025-01-31' },
+          ...validInput,
           minAmount: 1000,
         },
         mockContext
@@ -377,7 +384,7 @@ describe('Skill: get_sales_by_customer', () => {
 
       const result = await getSalesByCustomer.execute(
         {
-          period: { start: '2025-01-01', end: '2025-01-31' },
+          ...validInput,
           limit: 3,
         },
         mockContext
@@ -396,7 +403,7 @@ describe('Skill: get_sales_by_customer', () => {
       ]);
 
       const result = await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         mockContext
       );
 
@@ -411,6 +418,7 @@ describe('Skill: get_sales_by_customer', () => {
 
       const result = await getSalesByCustomer.execute(
         {
+          ...validInput,
           period: { start: '2025-01-01', end: '2025-01-31', label: 'January' },
         },
         mockContext
@@ -436,7 +444,7 @@ describe('Skill: get_sales_by_customer', () => {
       mockOdooClient.readGroup.mockRejectedValue(new Error('Connection refused'));
 
       const result = await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         mockContext
       );
 
@@ -453,7 +461,7 @@ describe('Skill: get_sales_by_customer', () => {
       );
 
       const result = await getSalesByCustomer.execute(
-        { period: { start: '2025-01-01', end: '2025-01-31' } },
+        validInput,
         mockContext
       );
 

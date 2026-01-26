@@ -7,11 +7,11 @@
 import { z } from 'zod';
 import type { Skill, SkillContext, SkillResult } from '../types';
 import { success, authError, PeriodSchema } from '../types';
-import { createOdooClient, dateRange, combineDomains } from './_client';
+import { createOdooClient, dateRange, combineDomains, getDefaultPeriod } from './_client';
 import { errorToResult } from '../errors';
 
 export const GetVendorBillsInputSchema = z.object({
-  period: PeriodSchema,
+  period: PeriodSchema.optional(),
   state: z.enum(['all', 'posted', 'draft']).default('posted'),
   supplierId: z.number().int().positive().optional(),
   limit: z.number().int().min(1).max(100).default(50),
@@ -40,9 +40,10 @@ export const getVendorBills: Skill<
 
     try {
       const odoo = createOdooClient(context.credentials.odoo);
+      const period = input.period || getDefaultPeriod();
 
       const domain = combineDomains(
-        dateRange('invoice_date', input.period.start, input.period.end),
+        dateRange('invoice_date', period.start, period.end),
         [['move_type', '=', 'in_invoice']]
       );
 
@@ -67,7 +68,7 @@ export const getVendorBills: Skill<
       return success({
         totalAmount,
         billCount: bills.length,
-        period: input.period,
+        period,
       });
     } catch (error) {
       return errorToResult(error);

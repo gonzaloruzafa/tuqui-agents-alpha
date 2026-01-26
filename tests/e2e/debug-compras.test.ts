@@ -61,6 +61,7 @@ describe.skipIf(SKIP_TESTS)('Debug: Compras Este Mes', () => {
         const endOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`
 
         const result = await executeQueries(odoo, TENANT_ID!, [{
+            id: 'test-1',
             model: 'purchase.report',
             operation: 'aggregate',
             groupBy: [],  // SIN groupBy
@@ -78,6 +79,7 @@ describe.skipIf(SKIP_TESTS)('Debug: Compras Este Mes', () => {
         const endOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`
 
         const result = await executeQueries(odoo, TENANT_ID!, [{
+            id: 'test-2',
             model: 'purchase.report',
             operation: 'aggregate',
             groupBy: ['partner_id'],  // CON groupBy
@@ -99,6 +101,7 @@ describe.skipIf(SKIP_TESTS)('Debug: Compras Este Mes', () => {
 
     it('executeQueries con filters "este mes" (como haría Tuqui)', async () => {
         const result = await executeQueries(odoo, TENANT_ID!, [{
+            id: 'test-3',
             model: 'purchase.report',
             operation: 'aggregate',
             filters: 'este mes',  // Filtro en lenguaje natural
@@ -131,6 +134,7 @@ describe.skipIf(SKIP_TESTS)('Debug: Compras Este Mes', () => {
 
         // 2. executeQueries sin groupBy
         const execNoGroup = await executeQueries(odoo, TENANT_ID!, [{
+            id: 'test-4',
             model: 'purchase.report',
             operation: 'aggregate',
             groupBy: [],
@@ -140,6 +144,7 @@ describe.skipIf(SKIP_TESTS)('Debug: Compras Este Mes', () => {
 
         // 3. executeQueries con groupBy
         const execWithGroup = await executeQueries(odoo, TENANT_ID!, [{
+            id: 'test-5',
             model: 'purchase.report',
             operation: 'aggregate',
             groupBy: ['partner_id'],

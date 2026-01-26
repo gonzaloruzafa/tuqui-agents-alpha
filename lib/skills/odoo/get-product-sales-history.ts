@@ -7,12 +7,12 @@
 import { z } from 'zod';
 import type { Skill, SkillContext, SkillResult } from '../types';
 import { success, authError, PeriodSchema } from '../types';
-import { createOdooClient, dateRange, combineDomains } from './_client';
+import { createOdooClient, dateRange, combineDomains, getDefaultPeriod } from './_client';
 import { errorToResult } from '../errors';
 
 export const GetProductSalesHistoryInputSchema = z.object({
   productId: z.number().int().positive(),
-  period: PeriodSchema,
+  period: PeriodSchema.optional(),
   groupBy: z.enum(['none', 'month', 'customer']).default('none'),
 });
 
@@ -42,9 +42,10 @@ export const getProductSalesHistory: Skill<
 
     try {
       const odoo = createOdooClient(context.credentials.odoo);
+      const period = input.period || getDefaultPeriod();
 
       const domain = combineDomains(
-        dateRange('date_order', input.period.start, input.period.end),
+        dateRange('date_order', period.start, period.end),
         [
           ['product_id', '=', input.productId],
           ['state', 'in', ['sale', 'done']],
@@ -69,7 +70,7 @@ export const getProductSalesHistory: Skill<
           totalQuantity,
           totalRevenue,
           orderCount: lines.length,
-          period: input.period,
+          period,
         });
       }
 
@@ -105,7 +106,7 @@ export const getProductSalesHistory: Skill<
         totalQuantity,
         totalRevenue,
         orderCount: grouped.length,
-        period: input.period,
+        period,
         groups,
       });
     } catch (error) {
