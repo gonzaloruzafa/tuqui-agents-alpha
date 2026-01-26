@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAgentBySlug } from '@/lib/agents/service'
 import { searchDocuments } from '@/lib/rag/search'
 import { routeMessage } from '@/lib/agents/router'
-import { streamChatWithOdoo } from '@/lib/tools/gemini-odoo'
+// God Tool removed - now using atomic Skills architecture
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { streamText } from 'ai'
 import { getToolsForAgent } from '@/lib/tools/executor'
@@ -98,47 +98,26 @@ export async function POST(req: NextRequest) {
             ? routingResult.selectedAgent.tools 
             : agent.tools || []
 
-        // 6. Execute chat based on tools
+        // 6. Execute chat with Skills architecture
         let response = ''
-        let toolsUsed: string[] = []
+        let toolsUsed: string[] = effectiveTools
 
-        // Check if Odoo agent
-        const useOdoo = effectiveTools.includes('odoo_intelligent_query') || 
-                       effectiveTools.includes('odoo') ||
-                       routingResult.selectedAgent?.slug === 'odoo'
+        // Use unified Skills-based approach for all agents
+        const tools = await getToolsForAgent(tenantId, effectiveTools, 'test@internal.com')
+        const { generateTextNative } = await import('@/lib/tools/native-gemini')
 
-        if (useOdoo) {
-            // Use Odoo-specific streaming
-            const history = messages.slice(0, -1).map((m: any) => ({
-                role: m.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: m.content }]
-            }))
+        const result = await generateTextNative({
+            model: 'gemini-2.0-flash',
+            system: systemPrompt + ragContext,
+            messages: messages.map((m: any) => ({
+                role: m.role,
+                content: m.content
+            })),
+            tools,
+            maxSteps: 5
+        })
 
-            for await (const chunk of streamChatWithOdoo(tenantId, '', inputContent, history)) {
-                if (typeof chunk === 'string') {
-                    response += chunk
-                }
-            }
-            toolsUsed.push('odoo_intelligent_query')
-        } else {
-            // Use native Gemini with proper tool schema conversion
-            const tools = await getToolsForAgent(tenantId, effectiveTools)
-            const { generateTextNative } = await import('@/lib/tools/native-gemini')
-            
-            const result = await generateTextNative({
-                model: 'gemini-2.0-flash',
-                system: systemPrompt + ragContext,
-                messages: messages.map((m: any) => ({
-                    role: m.role,
-                    content: m.content
-                })),
-                tools,
-                maxSteps: 5
-            })
-
-            response = result.text
-            toolsUsed = effectiveTools
-        }
+        response = result.text
 
         const latencyMs = Date.now() - startTime
 

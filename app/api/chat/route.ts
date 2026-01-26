@@ -3,7 +3,7 @@ import { getAgentBySlug } from '@/lib/agents/service'
 import { searchDocuments } from '@/lib/rag/search'
 import { getToolsForAgent } from '@/lib/tools/executor'
 import { checkUsageLimit, trackUsage } from '@/lib/billing/tracker'
-import { streamChatWithOdoo } from '@/lib/tools/gemini-odoo'
+// God Tool removed - now using atomic Skills architecture
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { streamText } from 'ai'
 import { getClient } from '@/lib/supabase/client'
@@ -136,83 +136,11 @@ export async function POST(req: Request) {
             }
         }
 
-        // 4. Check if uses Odoo tools (use native Google SDK for these)
-        const hasOdooTools = effectiveTools.some((t: string) => t.startsWith('odoo'))
+        console.log('[Chat] Loading tools:', effectiveTools)
 
-        console.log('[Chat] Loading tools:', effectiveTools, 'hasOdoo:', hasOdooTools)
-
-        // 5. Generate Stream
+        // Generate Stream using Skills architecture
         try {
-            // Use native Google SDK for Odoo agents (workaround for AI SDK bug with Gemini function calling)
-            if (hasOdooTools) {
-                console.log('[Chat] Using native Gemini SDK for Odoo agent')
-
-                // Convert message history to Gemini Content[] format
-                // Limit to last 20 messages to avoid context overflow
-                const MAX_HISTORY = 20
-                const SILENCE_TIMEOUT = 800
-                const historyMessages = messages.slice(
-                    Math.max(0, messages.length - 1 - MAX_HISTORY),
-                    -1  // Exclude last message (will be sent as userMessage)
-                )
-                const history = historyMessages.map((m: any) => {
-                    let content = m.content
-                    if (m.role === 'assistant' && m.tool_calls) {
-                        try {
-                            const tools = typeof m.tool_calls === 'string' ? JSON.parse(m.tool_calls) : m.tool_calls
-                            if (Array.isArray(tools) && tools.length > 0) {
-                                // Include REAL DATA in history so LLM has source of truth
-                                const toolSummaries = tools.map((t: any) => {
-                                    if (t.result_summary) {
-                                        return `[${t.name}] ${t.result_summary}`
-                                    }
-                                    return `[${t.name}]`
-                                }).join('\\n')
-                                content = `🔧 DATOS REALES DE ODOO:\\n${toolSummaries}\\n\\nRESPUESTA: ${content}`
-                            }
-                        } catch (e) {
-                            console.warn('[Chat] Failed to parse tool_calls for history enrichment')
-                        }
-                    }
-                    return {
-                        role: m.role === 'assistant' ? 'model' : 'user',
-                        parts: [{ text: content }]
-                    }
-                })
-
-                console.log('[Chat] Passing history with', history.length, 'messages')
-
-                const stream = streamChatWithOdoo(
-                    tenantId,
-                    systemSystem,
-                    inputContent,
-                    history
-                )
-
-                const encoder = new TextEncoder()
-                const readable = new ReadableStream({
-                    async start(controller) {
-                        try {
-                            for await (const chunk of stream) {
-                                // Only stream text chunks, skip metadata objects
-                                if (typeof chunk === 'string') {
-                                    controller.enqueue(encoder.encode(chunk))
-                                }
-                                // StreamChunk objects are metadata for non-streaming consumers
-                            }
-                            controller.close()
-                        } catch (error) {
-                            controller.error(error)
-                        }
-                    }
-                })
-
-                return new Response(readable, {
-                    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-                })
-            }
-
-            // Standard AI SDK path for non-Odoo agents
+            // All agents use standard AI SDK path with Skills
             let tools: any = {}
             try {
                 tools = await getToolsForAgent(tenantId, effectiveTools, session.user.email!)

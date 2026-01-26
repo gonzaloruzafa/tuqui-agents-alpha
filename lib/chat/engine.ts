@@ -2,7 +2,7 @@ import { getClient } from '@/lib/supabase/client'
 import { searchDocuments } from '@/lib/rag/search'
 import { getToolsForAgent } from '@/lib/tools/executor'
 import { checkUsageLimit, trackUsage } from '@/lib/billing/tracker'
-import { chatWithOdoo } from '@/lib/tools/gemini-odoo'
+// God Tool removed - now using atomic Skills architecture
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 import { Agent } from '@/lib/agents/service'
@@ -154,91 +154,34 @@ export async function processChatRequest(params: ChatEngineParams): Promise<Chat
             }
         }
 
-        // 5. Execution Path (using effective agent tools)
-        const hasOdooTools = effectiveAgent.tools?.some((t: string) => t.startsWith('odoo'))
+        // 5. Execution Path (unified with Skills architecture)
         let responseText = ''
         let totalTokens = 0
         let responseToolCalls: ToolCallRecord[] = []
 
-        if (hasOdooTools) {
-            // Path A: Odoo BI Agent (Native loop)
-            console.log('[ChatEngine] Using Odoo BI Agent path')
+        console.log('[ChatEngine] Loading tools (including Skills if Odoo enabled)')
+        const tools = await getToolsForAgent(tenantId, effectiveAgent.tools || [], userEmail)
+        const hasTools = Object.keys(tools).length > 0
 
-            // Convert history for Gemini - include tool_calls for context persistence
-            const history = messages.slice(0, -1).map(m => {
-                let content = m.content
-                // Enrich history with tool call info if available
-                if (m.role === 'assistant' && m.tool_calls && m.tool_calls.length > 0) {
-                    const toolInfo = m.tool_calls.map(tc => 
-                        `[Tool: ${tc.name}${tc.result_summary ? ` → ${tc.result_summary}` : ''}]`
-                    ).join(' ')
-                    content = `${toolInfo}\n\n${content}`
-                }
-                return {
-                    role: m.role === 'assistant' ? 'model' : 'user',
-                    parts: [{ text: content }]
-                }
-            }) as any[]
-
-            console.log('[ChatEngine] Odoo Path - System Prompt:', systemPrompt.substring(0, 200) + '...')
-            console.log('[ChatEngine] Odoo Path - User Message:', inputContent)
-            console.log('[ChatEngine] Odoo Path - History Count:', history.length)
-
-            const odooRes = await chatWithOdoo(tenantId, systemPrompt, inputContent, history)
-
-            console.log('[ChatEngine] Odoo Response:', JSON.stringify({
-                text: odooRes.text.substring(0, 100) + '...',
-                toolCalls: odooRes.toolCalls?.map(tc => tc.name),
-                toolResults: odooRes.toolResults?.map(tr => ({
-                    success: tr.success,
-                    error: tr.error,
-                    count: tr.count,
-                    model: (tr.data as any)?.[0]?.['_model'] // Just in case
-                }))
-            }, null, 2))
-
-            responseText = odooRes.text
-            // Odoo BI Agent doesn't expose usage yet, using estimate for now
-            totalTokens = responseText.length / 3
-            
-            // Extract tool calls for persistence with FULL data summary
-            if (odooRes.toolCalls && odooRes.toolCalls.length > 0) {
-                responseToolCalls = odooRes.toolCalls.map(tc => ({
-                    name: tc.name,
-                    args: tc.args,
-                    // Create DETAILED summary with actual data for context persistence
-                    result_summary: odooRes.toolResults?.[0] ? 
-                        formatToolResultSummary(odooRes.toolResults[0]) : 
-                        undefined
-                }))
-            }
+        if (hasTools) {
+            const { generateTextNative } = await import('@/lib/tools/native-gemini')
+            const result = await generateTextNative({
+                system: systemPrompt,
+                messages: messages as any,
+                tools: tools as any,
+                maxSteps: 5
+            })
+            responseText = result.text
+            totalTokens = result.usage.totalTokens || 0
         } else {
-            // Path B: Standard Agent with Tools (Native Gemini wrapper)
-            // Using native wrapper because AI SDK has schema conversion issues with Gemini 2.0
-            console.log('[ChatEngine] Using Standard Agent path with native wrapper')
-            const tools = await getToolsForAgent(tenantId, effectiveAgent.tools || [])
-            const hasTools = Object.keys(tools).length > 0
-
-            if (hasTools) {
-                const { generateTextNative } = await import('@/lib/tools/native-gemini')
-                const result = await generateTextNative({
-                    system: systemPrompt,
-                    messages: messages as any,
-                    tools: tools as any,
-                    maxSteps: 5
-                })
-                responseText = result.text
-                totalTokens = result.usage.totalTokens || 0
-            } else {
-                // No tools - use AI SDK (simpler, works fine without tools)
-                const result = await generateText({
-                    model: google('gemini-3-flash-preview'),
-                    system: systemPrompt,
-                    messages: messages as any
-                } as any)
-                responseText = result.text
-                totalTokens = result.usage.totalTokens || 0
-            }
+            // No tools - use AI SDK (simpler, works fine without tools)
+            const result = await generateText({
+                model: google('gemini-2.0-flash'),
+                system: systemPrompt,
+                messages: messages as any
+            } as any)
+            responseText = result.text
+            totalTokens = result.usage.totalTokens || 0
         }
 
         // 6. Track Usage
