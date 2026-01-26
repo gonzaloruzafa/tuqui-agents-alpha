@@ -826,3 +826,428 @@ describe('8. ANÁLISIS Y KPIs', () => {
         expect(true).toBe(true)
     })
 })
+
+// ============================================
+// 9. TESORERÍA Y FLUJO DE CAJA (Nuevos skills)
+// ============================================
+describe('9. TESORERÍA - Preguntas de flujo de caja', () => {
+
+    test.skipIf(SKIP_TESTS)('9.1 "¿Cuánta plata tenemos en caja?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Cuánta plata tenemos en caja?"')
+        console.log('='.repeat(60))
+
+        // Buscar journals de tipo cash y bank
+        const journals = await odooClient.searchRead('account.journal',
+            [['type', 'in', ['cash', 'bank']]], ['name', 'type'])
+
+        let totalCash = 0
+        let totalBank = 0
+
+        for (const journal of journals) {
+            const balance = await odooClient.readGroup('account.move.line',
+                [['journal_id', '=', journal.id], ['parent_state', '=', 'posted']],
+                ['balance'], [], { limit: 1 })
+
+            const amount = balance[0]?.balance || 0
+            if (journal.type === 'cash') {
+                totalCash += amount
+            } else {
+                totalBank += amount
+            }
+        }
+
+        console.log(`\n✅ RESPUESTA:`)
+        console.log(`   💵 Efectivo: ${fmt(totalCash)}`)
+        console.log(`   🏦 Bancos: ${fmt(totalBank)}`)
+        console.log(`   📊 Total: ${fmt(totalCash + totalBank)}`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('9.2 "¿Cuánto nos deben?" (resumen rápido)', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Cuánto nos deben?"')
+        console.log('='.repeat(60))
+
+        const result = await odooClient.readGroup('account.move',
+            [['move_type', '=', 'out_invoice'], ['state', '=', 'posted'], ['amount_residual', '>', 0]],
+            ['amount_residual'], [], { limit: 1 })
+
+        const total = result[0]?.amount_residual || 0
+        const count = await odooClient.searchCount('account.move',
+            [['move_type', '=', 'out_invoice'], ['state', '=', 'posted'], ['amount_residual', '>', 0]])
+
+        console.log(`\n✅ RESPUESTA: Nos deben ${fmt(total)} (${count} facturas impagas)`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('9.3 "¿Hay deuda vencida?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Hay deuda vencida?"')
+        console.log('='.repeat(60))
+
+        const hoy = new Date().toISOString().split('T')[0]
+        const result = await odooClient.readGroup('account.move',
+            [['move_type', '=', 'out_invoice'], ['state', '=', 'posted'], 
+             ['amount_residual', '>', 0], ['invoice_date_due', '<', hoy]],
+            ['amount_residual'], [], { limit: 1 })
+
+        const total = result[0]?.amount_residual || 0
+
+        console.log(`\n✅ RESPUESTA: ${total > 0 ? `Sí, hay ${fmt(total)} vencido` : 'No hay deuda vencida'}`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('9.4 "¿Quién nos debe más?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Quién nos debe más?"')
+        console.log('='.repeat(60))
+
+        const result = await odooClient.readGroup('account.move',
+            [['move_type', '=', 'out_invoice'], ['state', '=', 'posted'], ['amount_residual', '>', 0]],
+            ['amount_residual', 'partner_id'], ['partner_id'],
+            { limit: 10, orderBy: 'amount_residual desc' })
+
+        console.log('\n✅ Top 5 deudores:')
+        result.slice(0, 5).forEach((r: any, i: number) => {
+            console.log(`   ${i + 1}. ${r.partner_id[1]}: ${fmt(r.amount_residual)}`)
+        })
+
+        expect(true).toBe(true)
+    })
+})
+
+// ============================================
+// 10. COMPARATIVAS Y TENDENCIAS (compare_sales_periods)
+// ============================================
+describe('10. COMPARATIVAS - Análisis de tendencias', () => {
+
+    test.skipIf(SKIP_TESTS)('10.1 "¿Cómo venimos esta semana vs la pasada?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Cómo venimos esta semana vs la pasada?"')
+        console.log('='.repeat(60))
+
+        const now = new Date()
+        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        const prevWeekStart = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        const today = now.toISOString().split('T')[0]
+
+        const thisSemana = await odooClient.readGroup('sale.order',
+            [['date_order', '>=', weekStart], ['date_order', '<=', today], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        const prevSemana = await odooClient.readGroup('sale.order',
+            [['date_order', '>=', prevWeekStart], ['date_order', '<', weekStart], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        const thisWeek = thisSemana[0]?.amount_total || 0
+        const prevWeek = prevSemana[0]?.amount_total || 0
+        const diff = thisWeek - prevWeek
+        const pct = prevWeek > 0 ? ((diff / prevWeek) * 100).toFixed(1) : 'N/A'
+
+        console.log(`\n✅ RESPUESTA:`)
+        console.log(`   Esta semana: ${fmt(thisWeek)}`)
+        console.log(`   Semana pasada: ${fmt(prevWeek)}`)
+        console.log(`   Diferencia: ${fmt(diff)} (${pct}%)`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('10.2 "¿Subieron o bajaron las ventas?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Subieron o bajaron las ventas?"')
+        console.log('='.repeat(60))
+
+        const esteMes = await odooClient.readGroup('sale.order',
+            [['date_order', '>=', ESTE_MES.start], ['date_order', '<=', ESTE_MES.end], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        const mesPasado = await odooClient.readGroup('sale.order',
+            [['date_order', '>=', MES_PASADO.start], ['date_order', '<=', MES_PASADO.end], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        const este = esteMes[0]?.amount_total || 0
+        const prev = mesPasado[0]?.amount_total || 0
+        const trend = este > prev ? '📈 SUBIERON' : este < prev ? '📉 BAJARON' : '➡️ ESTABLES'
+
+        console.log(`\n✅ RESPUESTA: ${trend}`)
+        console.log(`   Este mes: ${fmt(este)}`)
+        console.log(`   Mes pasado: ${fmt(prev)}`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('10.3 "¿Hoy vendimos más que ayer?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Hoy vendimos más que ayer?"')
+        console.log('='.repeat(60))
+
+        const hoy = new Date().toISOString().split('T')[0]
+        const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+        const ventasHoy = await odooClient.readGroup('sale.order',
+            [['date_order', '=', hoy], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        const ventasAyer = await odooClient.readGroup('sale.order',
+            [['date_order', '=', ayer], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        const hoyTotal = ventasHoy[0]?.amount_total || 0
+        const ayerTotal = ventasAyer[0]?.amount_total || 0
+
+        console.log(`\n✅ RESPUESTA: ${hoyTotal > ayerTotal ? 'Sí, vendimos más hoy' : 'No, ayer fue mejor'}`)
+        console.log(`   Hoy: ${fmt(hoyTotal)}`)
+        console.log(`   Ayer: ${fmt(ayerTotal)}`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('10.4 "Dame un resumen del último trimestre"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "Dame un resumen del último trimestre"')
+        console.log('='.repeat(60))
+
+        // Q4 2024: Oct, Nov, Dec
+        const q4Start = '2024-10-01'
+        const q4End = '2024-12-31'
+
+        const ventas = await odooClient.readGroup('sale.order',
+            [['date_order', '>=', q4Start], ['date_order', '<=', q4End], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        const ordenes = await odooClient.searchCount('sale.order',
+            [['date_order', '>=', q4Start], ['date_order', '<=', q4End], ['state', 'in', ['sale', 'done']]])
+
+        const total = ventas[0]?.amount_total || 0
+
+        console.log(`\n✅ Resumen Q4 2024:`)
+        console.log(`   Total ventas: ${fmt(total)}`)
+        console.log(`   Cantidad órdenes: ${ordenes}`)
+        console.log(`   Ticket promedio: ${fmt(ordenes > 0 ? total / ordenes : 0)}`)
+
+        expect(true).toBe(true)
+    })
+})
+
+// ============================================
+// 11. PREGUNTAS AMBIGUAS (Edge cases)
+// ============================================
+describe('11. EDGE CASES - Preguntas ambiguas o difíciles', () => {
+
+    test.skipIf(SKIP_TESTS)('11.1 "¿Cómo estamos?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Cómo estamos?" (pregunta vaga)')
+        console.log('='.repeat(60))
+
+        // Esto debería dar un resumen general
+        console.log(`\n📊 Esta pregunta vaga debería disparar un dashboard general`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('11.2 "Necesito plata"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "Necesito plata" (pregunta implícita)')
+        console.log('='.repeat(60))
+
+        // Debería mostrar: caja + por cobrar + por pagar
+        console.log(`\n💰 Esta pregunta implícita debería mostrar situación de liquidez`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('11.3 "¿Hay algo urgente?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Hay algo urgente?"')
+        console.log('='.repeat(60))
+
+        // Stock bajo + facturas vencidas + entregas atrasadas
+        console.log(`\n🚨 Esta pregunta debería mostrar alertas activas`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('11.4 "Vendeme un iPhone"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "Vendeme un iPhone" (out of scope)')
+        console.log('='.repeat(60))
+
+        console.log(`\n⚠️ Esta pregunta NO es de Odoo - debería usar web_search o rechazar`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('11.5 "¿Cuánto vale el dólar?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Cuánto vale el dólar?" (out of scope)')
+        console.log('='.repeat(60))
+
+        console.log(`\n⚠️ Esta pregunta NO es de Odoo - debería usar web_search`)
+
+        expect(true).toBe(true)
+    })
+})
+
+// ============================================
+// 12. PREGUNTAS CON FECHAS NATURALES
+// ============================================
+describe('12. FECHAS NATURALES - Interpretación de períodos', () => {
+
+    test.skipIf(SKIP_TESTS)('12.1 "¿Cuánto vendimos la semana pasada?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Cuánto vendimos la semana pasada?"')
+        console.log('='.repeat(60))
+
+        const now = new Date()
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+
+        const start = twoWeeksAgo.toISOString().split('T')[0]
+        const end = weekAgo.toISOString().split('T')[0]
+
+        const ventas = await odooClient.readGroup('sale.order',
+            [['date_order', '>=', start], ['date_order', '<', end], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        console.log(`\n✅ Semana pasada (${start} a ${end}): ${fmt(ventas[0]?.amount_total || 0)}`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('12.2 "Ventas de diciembre"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "Ventas de diciembre"')
+        console.log('='.repeat(60))
+
+        const ventas = await odooClient.readGroup('sale.order',
+            [['date_order', '>=', '2024-12-01'], ['date_order', '<=', '2024-12-31'], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        console.log(`\n✅ Diciembre 2024: ${fmt(ventas[0]?.amount_total || 0)}`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('12.3 "Del 1 al 15 de enero"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "Ventas del 1 al 15 de enero"')
+        console.log('='.repeat(60))
+
+        const ventas = await odooClient.readGroup('sale.order',
+            [['date_order', '>=', '2025-01-01'], ['date_order', '<=', '2025-01-15'], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        console.log(`\n✅ 1-15 enero 2025: ${fmt(ventas[0]?.amount_total || 0)}`)
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('12.4 "Primer trimestre del año pasado"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "Ventas del primer trimestre del año pasado"')
+        console.log('='.repeat(60))
+
+        const ventas = await odooClient.readGroup('sale.order',
+            [['date_order', '>=', '2024-01-01'], ['date_order', '<=', '2024-03-31'], ['state', 'in', ['sale', 'done']]],
+            ['amount_total'], [], { limit: 1 })
+
+        console.log(`\n✅ Q1 2024: ${fmt(ventas[0]?.amount_total || 0)}`)
+
+        expect(true).toBe(true)
+    })
+})
+// ============================================
+// 13. BÚSQUEDAS DE PRODUCTOS (search-products skill)
+// ============================================
+describe('13. PRODUCTOS - Búsquedas diversas', () => {
+
+    test.skipIf(SKIP_TESTS)('13.1 "¿Tenemos cable de red?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Tenemos cable de red?"')
+        console.log('='.repeat(60))
+
+        const productos = await odooClient.searchRead('product.product',
+            [['name', 'ilike', '%cable%red%']], 
+            ['name', 'qty_available', 'list_price'])
+
+        console.log(`\n✅ Encontrados: ${productos.length} productos`)
+        productos.slice(0, 5).forEach((p: any) => {
+            console.log(`   - ${p.name}: ${p.qty_available} unidades @ ${fmt(p.list_price)}`)
+        })
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('13.2 "Productos que vendan más de $50.000"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "Productos que vendan más de $50.000"')
+        console.log('='.repeat(60))
+
+        const productos = await odooClient.searchRead('product.product',
+            [['list_price', '>', 50000]], 
+            ['name', 'list_price', 'qty_available'],
+            { limit: 10, order: 'list_price desc' })
+
+        console.log(`\n✅ Productos > $50.000:`)
+        productos.forEach((p: any) => {
+            console.log(`   - ${p.name}: ${fmt(p.list_price)}`)
+        })
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('13.3 "¿Cuántos SKUs tenemos activos?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Cuántos SKUs tenemos activos?"')
+        console.log('='.repeat(60))
+
+        const count = await odooClient.searchCount('product.product',
+            [['active', '=', true], ['type', '!=', 'service']])
+
+        console.log(`\n✅ Total SKUs activos: ${count}`)
+
+        expect(true).toBe(true)
+    })
+})
+
+// ============================================
+// 14. PROVEEDORES Y COMPRAS (preguntas adicionales)
+// ============================================
+describe('14. PROVEEDORES - Más preguntas de compras', () => {
+
+    test.skipIf(SKIP_TESTS)('14.1 "¿Cuánto le compramos a X este año?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Cuánto le compramos al proveedor principal este año?"')
+        console.log('='.repeat(60))
+
+        // Top proveedor
+        const topSupplier = await odooClient.readGroup('purchase.order',
+            [['state', 'in', ['purchase', 'done']], ['date_order', '>=', ESTE_ANO.start]],
+            ['amount_total', 'partner_id'], ['partner_id'],
+            { limit: 1, orderBy: 'amount_total desc' })
+
+        if (topSupplier.length > 0) {
+            console.log(`\n✅ Top proveedor: ${topSupplier[0].partner_id[1]}`)
+            console.log(`   Total comprado: ${fmt(topSupplier[0].amount_total)}`)
+        }
+
+        expect(true).toBe(true)
+    })
+
+    test.skipIf(SKIP_TESTS)('14.2 "¿Tenemos órdenes de compra pendientes?"', async () => {
+        console.log('\n' + '='.repeat(60))
+        console.log('🗣️ "¿Tenemos órdenes de compra pendientes?"')
+        console.log('='.repeat(60))
+
+        const pendientes = await odooClient.searchCount('purchase.order',
+            [['state', 'in', ['draft', 'sent', 'to approve']]])
+
+        console.log(`\n✅ Órdenes de compra pendientes: ${pendientes}`)
+
+        expect(true).toBe(true)
+    })
+})
