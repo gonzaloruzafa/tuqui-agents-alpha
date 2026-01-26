@@ -117,8 +117,10 @@ export const compareSalesPeriods: Skill<
   name: 'compare_sales_periods',
 
   description: `Compare sales between two periods.
-Use when user asks: "compare sales", "today vs yesterday", "this month vs last month",
-"comparar ventas", "hoy vs ayer", "cómo vamos respecto a", "evolución de ventas".
+Use for: "compare sales", "today vs yesterday", "this month vs last month",
+"comparar ventas", "hoy vs ayer", "cómo vamos respecto a", "evolución de ventas",
+"esta semana vs la pasada", "¿subieron las ventas?", "¿bajaron las ventas?",
+"cómo venimos", "qué tal ventas". Defaults to this month vs last month if no period specified.
 Returns totals, changes, and percentage variations.`,
 
   tool: 'odoo',
