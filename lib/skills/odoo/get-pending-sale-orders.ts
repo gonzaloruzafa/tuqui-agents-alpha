@@ -59,7 +59,9 @@ export const getPendingSaleOrders: Skill<
   PendingSaleOrdersOutput
 > = {
   name: 'get_pending_sale_orders',
-  description: 'Get pending sale orders (confirmed but not delivered/invoiced). Use for "órdenes pendientes", "pedidos sin entregar", "órdenes de venta pendientes", "pending orders", "orders to deliver", "backlog", "ventas pendientes". Returns count and list of pending orders.',
+  description: `Órdenes de venta pendientes - pedidos confirmados sin entregar o facturar. 
+HERRAMIENTA PRINCIPAL para "cuántas órdenes pendientes", "pedidos sin entregar", "ventas pendientes".
+SIEMPRE ejecutar con AMBAS (entrega Y facturación) - NO preguntar cuál tipo. Devuelve lista de órdenes.`,
   tool: 'odoo',
   tags: ['sales', 'orders', 'pending', 'delivery'],
   inputSchema: GetPendingSaleOrdersInputSchema,

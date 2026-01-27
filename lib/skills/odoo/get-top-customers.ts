@@ -35,7 +35,9 @@ export const getTopCustomers: Skill<
   TopCustomersOutput
 > = {
   name: 'get_top_customers',
-  description: 'Get top customers by sales revenue. Use for "mejores clientes", "clientes top", "best customers", "top clients", "who buys most", "quién compra más".',
+  description: `Top clientes por ventas - mejores clientes y cuánto compraron. USA MES ACTUAL si no hay período.
+Use for: "mejores clientes", "clientes top", "best customers", "quién compra más", "mi mejor cliente".
+SIEMPRE ejecutar sin preguntar período - usa default mes actual automáticamente.`,
   tool: 'odoo',
   tags: ['sales', 'customers', 'reporting'],
   inputSchema: GetTopCustomersInputSchema,
