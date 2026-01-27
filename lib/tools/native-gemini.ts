@@ -1,19 +1,24 @@
 import { GoogleGenerativeAI, Content, FunctionDeclaration, SchemaType } from '@google/generative-ai'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 
 /**
  * Convert Zod schema to Gemini parameters format
+ * Uses Zod 4 native toJSONSchema() method
  */
 function zodToGeminiParams(zodSchema: any): { type: SchemaType, properties: Record<string, any>, required: string[] } {
     try {
-        // Convert Zod to JSON Schema
-        const jsonSchema = zodToJsonSchema(zodSchema, { $refStrategy: 'none' })
+        // Zod 4 has native toJSONSchema() method
+        if (typeof zodSchema.toJSONSchema !== 'function') {
+            console.warn('[NativeGemini] Schema does not have toJSONSchema method')
+            return { type: SchemaType.OBJECT, properties: {}, required: [] }
+        }
+        
+        const jsonSchema = zodSchema.toJSONSchema()
         
         // Extract properties and required from JSON Schema
         const properties: Record<string, any> = {}
-        const required: string[] = (jsonSchema as any).required || []
+        const required: string[] = jsonSchema.required || []
         
-        for (const [key, value] of Object.entries((jsonSchema as any).properties || {})) {
+        for (const [key, value] of Object.entries(jsonSchema.properties || {})) {
             const prop = value as any
             properties[key] = convertJsonSchemaType(prop)
         }
