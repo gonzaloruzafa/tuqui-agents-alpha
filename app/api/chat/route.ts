@@ -238,8 +238,8 @@ REGLAS:
 
             // Use native Gemini wrapper when we have tools (AI SDK has schema conversion issues)
             if (hasTools) {
-                console.log('[Chat] Using native Gemini wrapper for tools with streaming thinking')
-                const { generateTextNative } = await import('@/lib/tools/native-gemini')
+                console.log('[Chat] Using native Gemini V2 with thinking support')
+                const { generateTextWithThinking } = await import('@/lib/tools/native-gemini-v2')
                 
                 // Create a streaming response with thinking events
                 const encoder = new TextEncoder()
@@ -247,17 +247,30 @@ REGLAS:
                 const stream = new ReadableStream({
                     async start(controller) {
                         try {
-                            const result = await generateTextNative({
+                            const result = await generateTextWithThinking({
+                                model: 'gemini-3-flash-preview',
                                 system: systemSystem,
                                 messages,
                                 tools,
                                 maxSteps: 5,
+                                thinkingLevel: 'medium', // Balanced thinking for most tasks
+                                includeThoughts: true,
                                 onThinkingStep: (step) => {
-                                    // Emit thinking event with t: prefix
+                                    // Emit tool execution event with t: prefix
                                     const event = `t:${JSON.stringify(step)}\n`
+                                    controller.enqueue(encoder.encode(event))
+                                },
+                                onThinkingSummary: (summary) => {
+                                    // Emit thinking summary with th: prefix
+                                    const event = `th:${JSON.stringify({ text: summary })}\n`
                                     controller.enqueue(encoder.encode(event))
                                 }
                             })
+
+                            // Log thinking tokens used
+                            if (result.usage.thinkingTokens) {
+                                console.log(`[Chat] Thinking tokens used: ${result.usage.thinkingTokens}`)
+                            }
 
                             // Emit the final text response
                             controller.enqueue(encoder.encode(result.text))

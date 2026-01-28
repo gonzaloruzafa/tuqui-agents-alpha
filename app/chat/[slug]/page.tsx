@@ -118,6 +118,21 @@ const AudioVisualizer = ({ isRecording }: { isRecording: boolean }) => {
     )
 }
 
+/**
+ * Wrapper for ThinkingStream in completed messages - has its own toggle state
+ */
+function CollapsibleThinkingStream({ steps, thinkingText }: { steps: ThinkingStep[], thinkingText?: string }) {
+    const [isExpanded, setIsExpanded] = useState(false)
+    return (
+        <ThinkingStream 
+            steps={steps}
+            thinkingText={thinkingText}
+            isExpanded={isExpanded}
+            onToggle={() => setIsExpanded(!isExpanded)}
+        />
+    )
+}
+
 interface TuquiCapability {
     icon: string
     title: string
@@ -440,7 +455,7 @@ export default function ChatPage() {
                 
                 for (const line of lines) {
                     if (line.startsWith('t:')) {
-                        // Parse thinking event
+                        // Parse tool execution event
                         try {
                             const step = JSON.parse(line.slice(2)) as ThinkingStep
                             // Collect sources in ref for later use
@@ -459,6 +474,15 @@ export default function ChatPage() {
                             })
                         } catch (e) {
                             console.warn('[Chat] Failed to parse thinking event:', line)
+                        }
+                    } else if (line.startsWith('th:')) {
+                        // Parse thinking summary (Chain of Thought from model)
+                        try {
+                            const { text } = JSON.parse(line.slice(3))
+                            console.log('[Chat] 🧠 Thinking summary:', text.slice(0, 100) + '...')
+                            setThinkingText(prev => prev + text)
+                        } catch (e) {
+                            console.warn('[Chat] Failed to parse thinking summary:', line)
                         }
                     } else {
                         textChunk += line + '\n'
@@ -489,14 +513,9 @@ export default function ChatPage() {
                     }
                 }
 
-                // Extract <thinking> block for display (but keep it in botText for now)
-                const thinkingMatch = botText.match(/<thinking>([\s\S]*?)<\/thinking>/i)
-                if (thinkingMatch) {
-                    setThinkingText(thinkingMatch[1].trim())
-                }
-
-                // Remove <thinking> block from displayed text
-                const displayText = botText.replace(/<thinking>[\s\S]*?<\/thinking>\s*/gi, '')
+                // No need to extract <thinking> blocks anymore - they come as th: events
+                // Just display the text directly
+                const displayText = botText
                 
                 // Only create/update temp-bot message when there's actual visible content
                 if (displayText.trim()) {
@@ -513,7 +532,8 @@ export default function ChatPage() {
             }
 
             // Final cleanup - remove thinking from saved/displayed text
-            const finalText = botText.replace(/<thinking>[\s\S]*?<\/thinking>\s*/gi, '')
+            // No need to clean thinking blocks - they come separately now
+            const finalText = botText
             const finalHtml = wrapTablesInScrollContainer(await marked.parse(finalText))
             
             // Use sources collected in ref (state may not be updated yet)
@@ -751,11 +771,7 @@ export default function ChatPage() {
                                             
                                             {/* Show ThinkingStream for completed messages with steps */}
                                             {m.thinkingSteps && m.thinkingSteps.length > 0 && !isStreamingBot && (
-                                                <ThinkingStream 
-                                                    steps={m.thinkingSteps} 
-                                                    isExpanded={false}
-                                                    onToggle={() => {}}
-                                                />
+                                                <CollapsibleThinkingStream steps={m.thinkingSteps} />
                                             )}
                                         </div>
                                     </div>
