@@ -1,17 +1,20 @@
 /**
  * ThinkingStream Component
  * 
- * Muestra los pasos de "thinking" en tiempo real mientras se ejecutan tools.
- * Incluye logos de agentes (Odoo, MeLi, etc.) y duraciones.
+ * Muestra el proceso de "thinking" del modelo:
+ * 1. Chain of Thought (razonamiento previo)
+ * 2. Tool execution en tiempo real
  */
 
 'use client'
 
 import { useState, useEffect } from 'react'
 import { ThinkingStep, ThinkingSource, SOURCE_NAMES } from '@/lib/thinking/types'
-import Image from 'next/image'
 
 interface ThinkingStreamProps {
+    /** Texto del bloque <thinking>...</thinking> */
+    thinkingText?: string
+    /** Steps de ejecución de tools */
     steps: ThinkingStep[]
     isExpanded?: boolean
     onToggle?: () => void
@@ -88,11 +91,16 @@ function formatDuration(ms: number): string {
     return `${(ms / 1000).toFixed(1)}s`
 }
 
-export function ThinkingStream({ steps, isExpanded = true, onToggle }: ThinkingStreamProps) {
-    if (steps.length === 0) return null
+export function ThinkingStream({ thinkingText, steps, isExpanded = true, onToggle }: ThinkingStreamProps) {
+    const hasContent = thinkingText || steps.length > 0
+    if (!hasContent) return null
 
     const completedSteps = steps.filter(s => s.status === 'done' || s.status === 'error')
     const runningStep = steps.find(s => s.status === 'running')
+    
+    // Determinar estado general
+    const isThinking = !!thinkingText && steps.length === 0
+    const isExecuting = steps.length > 0
     
     return (
         <div className="mb-3 ml-12">
@@ -101,51 +109,77 @@ export function ThinkingStream({ steps, isExpanded = true, onToggle }: ThinkingS
                 onClick={onToggle}
                 className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-400 transition-colors mb-2"
             >
-                <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
-                <span>
-                    {runningStep ? 'Procesando...' : `${completedSteps.length} pasos completados`}
+                <span className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                <span className="flex items-center gap-1.5">
+                    {isThinking && (
+                        <>
+                            <span className="animate-pulse">💭</span>
+                            <span>Analizando pregunta...</span>
+                        </>
+                    )}
+                    {isExecuting && runningStep && (
+                        <>
+                            <span className="animate-pulse">⚡</span>
+                            <span>Ejecutando consultas...</span>
+                        </>
+                    )}
+                    {isExecuting && !runningStep && (
+                        <span>✓ {completedSteps.length} consultas completadas</span>
+                    )}
                 </span>
             </button>
             
             {isExpanded && (
-                <div className="space-y-1.5 border-l-2 border-gray-700 pl-3">
-                    {steps.map((step, index) => (
-                        <div 
-                            key={`${step.tool}-${step.startedAt}`}
-                            className={`flex items-center gap-2 text-sm transition-opacity duration-300 ${
-                                step.status === 'running' ? 'opacity-100' : 'opacity-70'
-                            }`}
-                        >
-                            {/* Logo del agente */}
-                            <div className="flex-shrink-0">
-                                {LOGOS[step.source]}
-                            </div>
-                            
-                            {/* Nombre del tool */}
-                            <span className={`flex-1 ${
-                                step.status === 'error' ? 'text-red-400' : 'text-gray-300'
-                            }`}>
-                                {getToolDisplayName(step.tool)}
-                            </span>
-                            
-                            {/* Estado / Duración */}
-                            <span className="text-xs text-gray-500 flex-shrink-0">
-                                {step.status === 'running' && (
-                                    <span className="flex items-center gap-1">
-                                        <span className="animate-pulse">●</span>
-                                    </span>
-                                )}
-                                {step.status === 'done' && step.duration && (
-                                    <span className="text-green-500">
-                                        ✓ {formatDuration(step.duration)}
-                                    </span>
-                                )}
-                                {step.status === 'error' && (
-                                    <span className="text-red-400">✗</span>
-                                )}
-                            </span>
+                <div className="space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
+                    {/* Chain of Thought text */}
+                    {thinkingText && (
+                        <div className="text-sm text-gray-500 dark:text-gray-400 italic whitespace-pre-line bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                            {thinkingText}
                         </div>
-                    ))}
+                    )}
+                    
+                    {/* Tool execution steps */}
+                    {steps.length > 0 && (
+                        <div className="space-y-1.5 pt-1">
+                            {steps.map((step, index) => (
+                                <div 
+                                    key={`${step.tool}-${step.startedAt}`}
+                                    className={`flex items-center gap-2 text-sm transition-opacity duration-300 ${
+                                        step.status === 'running' ? 'opacity-100' : 'opacity-70'
+                                    }`}
+                                >
+                                    {/* Logo del agente */}
+                                    <div className="flex-shrink-0">
+                                        {LOGOS[step.source]}
+                                    </div>
+                                    
+                                    {/* Nombre del tool */}
+                                    <span className={`flex-1 ${
+                                        step.status === 'error' ? 'text-red-400' : 'text-gray-600 dark:text-gray-300'
+                                    }`}>
+                                        {getToolDisplayName(step.tool)}
+                                    </span>
+                                    
+                                    {/* Estado / Duración */}
+                                    <span className="text-xs text-gray-500 flex-shrink-0">
+                                        {step.status === 'running' && (
+                                            <span className="flex items-center gap-1">
+                                                <span className="animate-pulse text-amber-500">●</span>
+                                            </span>
+                                        )}
+                                        {step.status === 'done' && step.duration && (
+                                            <span className="text-green-500">
+                                                ✓ {formatDuration(step.duration)}
+                                            </span>
+                                        )}
+                                        {step.status === 'error' && (
+                                            <span className="text-red-400">✗</span>
+                                        )}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

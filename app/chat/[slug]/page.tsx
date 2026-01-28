@@ -178,6 +178,7 @@ export default function ChatPage() {
     const [input, setInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([])
+    const [thinkingText, setThinkingText] = useState<string>('') // Chain of Thought text
     const [thinkingExpanded, setThinkingExpanded] = useState(true)
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [sessions, setSessions] = useState<Session[]>([])
@@ -415,6 +416,7 @@ export default function ChatPage() {
 
             let botText = ''
             setThinkingSteps([]) // Reset thinking steps
+            setThinkingText('') // Reset thinking text
 
             while (true) {
                 const { done, value } = await reader.read()
@@ -473,28 +475,39 @@ export default function ChatPage() {
                     }
                 }
 
-                const partialHtml = wrapTablesInScrollContainer(await marked.parse(botText))
+                // Extract <thinking> block for display (but keep it in botText for now)
+                const thinkingMatch = botText.match(/<thinking>([\s\S]*?)<\/thinking>/i)
+                if (thinkingMatch) {
+                    setThinkingText(thinkingMatch[1].trim())
+                }
+
+                // Remove <thinking> block from displayed text
+                const displayText = botText.replace(/<thinking>[\s\S]*?<\/thinking>\s*/gi, '')
+                
+                const partialHtml = wrapTablesInScrollContainer(await marked.parse(displayText))
                 setMessages(prev => {
                     const last = prev[prev.length - 1]
                     if (last?.id === 'temp-bot') {
-                        return [...prev.slice(0, -1), { ...last, content: partialHtml, rawContent: botText }]
+                        return [...prev.slice(0, -1), { ...last, content: partialHtml, rawContent: displayText }]
                     } else {
-                        return [...prev, { id: 'temp-bot', role: 'assistant', content: partialHtml, rawContent: botText }]
+                        return [...prev, { id: 'temp-bot', role: 'assistant', content: partialHtml, rawContent: displayText }]
                     }
                 })
             }
 
-            const finalHtml = wrapTablesInScrollContainer(await marked.parse(botText))
+            // Final cleanup - remove thinking from saved/displayed text
+            const finalText = botText.replace(/<thinking>[\s\S]*?<\/thinking>\s*/gi, '')
+            const finalHtml = wrapTablesInScrollContainer(await marked.parse(finalText))
             setMessages(prev => {
                 const filtered = prev.filter(m => m.id !== 'temp-bot')
-                return [...filtered, { id: Date.now().toString(), role: 'assistant', content: finalHtml, rawContent: botText }]
+                return [...filtered, { id: Date.now().toString(), role: 'assistant', content: finalHtml, rawContent: finalText }]
             })
 
-            // Save Bot Message
+            // Save Bot Message (without thinking block)
             await fetch('/api/chat-sessions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'save-message', sessionId: sid, role: 'assistant', content: botText })
+                body: JSON.stringify({ action: 'save-message', sessionId: sid, role: 'assistant', content: finalText })
             })
 
             // Update URL AFTER streaming completes (avoids race condition with useEffect)
@@ -530,6 +543,7 @@ export default function ChatPage() {
         } finally {
             setIsLoading(false)
             setThinkingSteps([]) // Clear thinking steps when done
+            setThinkingText('') // Clear thinking text when done
         }
     }
 
@@ -699,8 +713,9 @@ export default function ChatPage() {
                             </div>
                         ))}
                         {isLoading && (
-                            thinkingSteps.length > 0 ? (
+                            (thinkingText || thinkingSteps.length > 0) ? (
                                 <ThinkingStream 
+                                    thinkingText={thinkingText}
                                     steps={thinkingSteps} 
                                     isExpanded={thinkingExpanded}
                                     onToggle={() => setThinkingExpanded(!thinkingExpanded)}
