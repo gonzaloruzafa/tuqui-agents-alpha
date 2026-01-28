@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, Content, FunctionDeclaration, SchemaType } from '@google/generative-ai'
+import { ThinkingStep, OnThinkingStep, getToolSource } from '@/lib/thinking/types'
 
 /**
  * Record of a tool call made during generation
@@ -109,19 +110,23 @@ function convertJsonSchemaType(prop: any): any {
 /**
  * Generic Native Gemini Text Generation with Tool Support
  * Fixes "parameters schema should be of type OBJECT" error in AI SDK
+ * 
+ * @param onThinkingStep - Optional callback to emit thinking events as tools execute
  */
 export async function generateTextNative({
     model: modelName = 'gemini-3-flash-preview',
     system,
     messages,
     tools,
-    maxSteps = 5
+    maxSteps = 5,
+    onThinkingStep
 }: {
     model?: string
     system: string
     messages: any[]
     tools?: Record<string, any>
     maxSteps?: number
+    onThinkingStep?: OnThinkingStep
 }) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -245,6 +250,17 @@ export async function generateTextNative({
             let toolResult: any
             let error: string | undefined
             const startTime = Date.now()
+            const source = getToolSource(name)
+            
+            // Emit thinking step: running
+            if (onThinkingStep) {
+                onThinkingStep({
+                    tool: name,
+                    source,
+                    status: 'running',
+                    startedAt: startTime
+                })
+            }
             
             if (!tool || !tool.execute) {
                 console.warn(`[NativeGemini] Tool ${name} not found, returning error to model`)
@@ -273,6 +289,18 @@ export async function generateTextNative({
             }
             
             const durationMs = Date.now() - startTime
+            
+            // Emit thinking step: done or error
+            if (onThinkingStep) {
+                onThinkingStep({
+                    tool: name,
+                    source,
+                    status: error ? 'error' : 'done',
+                    duration: durationMs,
+                    error,
+                    startedAt: startTime
+                })
+            }
             
             // Record the tool call
             toolCalls.push({

@@ -213,34 +213,50 @@ export async function POST(req: Request) {
 
             // Use native Gemini wrapper when we have tools (AI SDK has schema conversion issues)
             if (hasTools) {
-                console.log('[Chat] Using native Gemini wrapper for tools')
+                console.log('[Chat] Using native Gemini wrapper for tools with streaming thinking')
                 const { generateTextNative } = await import('@/lib/tools/native-gemini')
                 
-                try {
-                    const result = await generateTextNative({
-                        system: systemSystem,
-                        messages,
-                        tools,
-                        maxSteps: 5
-                    })
+                // Create a streaming response with thinking events
+                const encoder = new TextEncoder()
+                
+                const stream = new ReadableStream({
+                    async start(controller) {
+                        try {
+                            const result = await generateTextNative({
+                                system: systemSystem,
+                                messages,
+                                tools,
+                                maxSteps: 5,
+                                onThinkingStep: (step) => {
+                                    // Emit thinking event with t: prefix
+                                    const event = `t:${JSON.stringify(step)}\n`
+                                    controller.enqueue(encoder.encode(event))
+                                }
+                            })
 
-                    // Track usage
-                    try {
-                        await trackUsage(tenantId, session.user.email!, result.usage.totalTokens || 0)
-                    } catch (e) {
-                        console.error('[Chat] Failed to track usage:', e)
+                            // Emit the final text response
+                            controller.enqueue(encoder.encode(result.text))
+                            controller.close()
+                            
+                            // Track usage after stream completes
+                            try {
+                                await trackUsage(tenantId, session.user.email!, result.usage.totalTokens || 0)
+                            } catch (e) {
+                                console.error('[Chat] Failed to track usage:', e)
+                            }
+                        } catch (error: any) {
+                            console.error('[Chat] Streaming error:', error)
+                            controller.error(error)
+                        }
                     }
+                })
 
-                    return new Response(result.text, {
-                        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-                    })
-                } catch (nativeError: any) {
-                    console.error('[Chat] Native Gemini error:', nativeError)
-                    return new Response(JSON.stringify({
-                        error: 'Error generating response with tools',
-                        details: nativeError.message
-                    }), { status: 500 })
-                }
+                return new Response(stream, {
+                    headers: { 
+                        'Content-Type': 'text/plain; charset=utf-8',
+                        'X-Content-Type-Options': 'nosniff'
+                    }
+                })
             }
 
             // No tools - use AI SDK streamText

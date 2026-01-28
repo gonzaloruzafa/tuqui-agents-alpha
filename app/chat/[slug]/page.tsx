@@ -15,7 +15,9 @@ import {
 import { marked } from 'marked'
 import { VoiceChat } from '@/components/chat/VoiceChat'
 import { ThinkingIndicator } from '@/components/chat/ThinkingIndicator'
+import { ThinkingStream } from '@/components/chat/ThinkingStream'
 import { MeliSkillsRenderer } from '@/components/chat/MeliSkillsRenderer'
+import type { ThinkingStep } from '@/lib/thinking/types'
 
 // Configure marked to open external links in new tab
 const renderer = new marked.Renderer()
@@ -175,6 +177,8 @@ export default function ChatPage() {
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([])
+    const [thinkingExpanded, setThinkingExpanded] = useState(true)
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [sessions, setSessions] = useState<Session[]>([])
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionIdParam)
@@ -410,31 +414,63 @@ export default function ChatPage() {
             if (!reader) throw new Error('No reader available')
 
             let botText = ''
+            setThinkingSteps([]) // Reset thinking steps
 
             while (true) {
                 const { done, value } = await reader.read()
                 if (done) break
 
                 const chunk = new TextDecoder().decode(value)
-                const isDataStream = chunk.match(/^[0-9a-z]:/m)
+                
+                // Check for thinking events (t:) first
+                const lines = chunk.split('\n').filter(line => line.trim())
+                let textChunk = ''
+                
+                for (const line of lines) {
+                    if (line.startsWith('t:')) {
+                        // Parse thinking event
+                        try {
+                            const step = JSON.parse(line.slice(2)) as ThinkingStep
+                            setThinkingSteps(prev => {
+                                // Update existing step or add new one
+                                const existing = prev.findIndex(s => s.tool === step.tool && s.startedAt === step.startedAt)
+                                if (existing >= 0) {
+                                    const updated = [...prev]
+                                    updated[existing] = step
+                                    return updated
+                                }
+                                return [...prev, step]
+                            })
+                        } catch (e) {
+                            console.warn('[Chat] Failed to parse thinking event:', line)
+                        }
+                    } else {
+                        textChunk += line + '\n'
+                    }
+                }
+                
+                // Process remaining text
+                if (textChunk.trim()) {
+                    const isDataStream = textChunk.match(/^[0-9a-z]:/m)
 
-                if (isDataStream) {
-                    const lines = chunk.split('\n').filter(line => line.trim())
-                    for (const line of lines) {
-                        const match = line.match(/^([0-9a-z]):(.*)$/)
-                        if (match) {
-                            const [_, type, content] = match
-                            if (type === '0') {
-                                try {
-                                    botText += JSON.parse(content)
-                                } catch (e) {
-                                    botText += content.replace(/^"|"$/g, '')
+                    if (isDataStream) {
+                        const dataLines = textChunk.split('\n').filter(l => l.trim())
+                        for (const dataLine of dataLines) {
+                            const match = dataLine.match(/^([0-9a-z]):(.*)$/)
+                            if (match) {
+                                const [_, type, content] = match
+                                if (type === '0') {
+                                    try {
+                                        botText += JSON.parse(content)
+                                    } catch (e) {
+                                        botText += content.replace(/^"|"$/g, '')
+                                    }
                                 }
                             }
                         }
+                    } else {
+                        botText += textChunk
                     }
-                } else {
-                    botText += chunk
                 }
 
                 const partialHtml = wrapTablesInScrollContainer(await marked.parse(botText))
@@ -493,6 +529,7 @@ export default function ChatPage() {
             setMessages(prev => [...prev.filter(m => m.id !== 'temp-bot'), { id: Date.now().toString(), role: 'assistant', content: errorHtml, rawContent: errorMessage }])
         } finally {
             setIsLoading(false)
+            setThinkingSteps([]) // Clear thinking steps when done
         }
     }
 
@@ -661,7 +698,17 @@ export default function ChatPage() {
                                 )}
                             </div>
                         ))}
-                        {isLoading && <ThinkingIndicator />}
+                        {isLoading && (
+                            thinkingSteps.length > 0 ? (
+                                <ThinkingStream 
+                                    steps={thinkingSteps} 
+                                    isExpanded={thinkingExpanded}
+                                    onToggle={() => setThinkingExpanded(!thinkingExpanded)}
+                                />
+                            ) : (
+                                <ThinkingIndicator />
+                            )
+                        )}
                         <div ref={messagesEndRef} />
                     </div>
                 </div>
