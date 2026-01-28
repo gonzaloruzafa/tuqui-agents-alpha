@@ -80,10 +80,7 @@ export const getSalesByCustomer: Skill<
 > = {
   name: 'get_sales_by_customer',
 
-  description: `Get sales grouped by customer for a period.
-Use when user asks: "top customers", "best clients", "who bought most",
-"sales by customer", "customer ranking", "mejores clientes", "ventas por cliente".
-Returns customer list with order count and total amount, sorted by total descending.`,
+  description: `Mejorar el manejo de errores de autenticación. En lugar de mostrar el error técnico al usuario, intentar reautenticar o notificar al administrador.`,
 
   tool: 'odoo',
 

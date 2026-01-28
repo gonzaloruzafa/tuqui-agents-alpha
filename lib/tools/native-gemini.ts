@@ -1,6 +1,26 @@
 import { GoogleGenerativeAI, Content, FunctionDeclaration, SchemaType } from '@google/generative-ai'
 
 /**
+ * Record of a tool call made during generation
+ */
+export interface ToolCallRecord {
+    toolName: string
+    args: Record<string, any>
+    result: any
+    durationMs: number
+    error?: string
+}
+
+/**
+ * Extended result with tool call tracking
+ */
+export interface GenerateTextResultWithTools {
+    text: string
+    usage: { totalTokens: number }
+    toolCalls: ToolCallRecord[]
+}
+
+/**
  * Convert Zod schema to Gemini parameters format
  * Uses Zod 4 native toJSONSchema() method
  */
@@ -185,6 +205,7 @@ export async function generateTextNative({
     let result: any
     let response: any
     let totalTokens = 0
+    const toolCalls: ToolCallRecord[] = []
     
     try {
         result = await chat.sendMessage(lastMessage)
@@ -222,18 +243,33 @@ export async function generateTextNative({
 
             const tool = tools?.[name]
             let toolResult: any
+            let error: string | undefined
+            const startTime = Date.now()
             
             if (!tool || !tool.execute) {
                 console.warn(`[NativeGemini] Tool ${name} not found, returning error to model`)
                 toolResult = { error: `Tool ${name} no está disponible. Usa web_search.` }
+                error = `Tool ${name} not found`
             } else {
                 try {
                     toolResult = await tool.execute(args)
                 } catch (execError: any) {
                     console.error(`[NativeGemini] Tool ${name} execution error:`, execError)
                     toolResult = { error: execError.message || 'Tool execution failed' }
+                    error = execError.message
                 }
             }
+            
+            const durationMs = Date.now() - startTime
+            
+            // Record the tool call
+            toolCalls.push({
+                toolName: name,
+                args,
+                result: toolResult,
+                durationMs,
+                error
+            })
 
             functionResponses.push({
                 functionResponse: {
@@ -252,6 +288,7 @@ export async function generateTextNative({
 
     return {
         text: response.text(),
-        usage: { totalTokens }
-    }
+        usage: { totalTokens },
+        toolCalls
+    } as GenerateTextResultWithTools
 }

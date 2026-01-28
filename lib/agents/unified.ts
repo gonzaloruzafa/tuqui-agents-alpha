@@ -113,6 +113,19 @@ DEFAULTS OBLIGATORIOS:
 - "¿Cuánto le vendimos a X?" → get_sales_by_customer (mes actual, cliente específico)
 - "Órdenes de compra pendientes" → get_purchase_orders (state='purchase' = confirmadas)
 
+🛒 MERCADOLIBRE / PRECIOS DE MERCADO (⚠️ OBLIGATORIO):
+Cuando el usuario pregunta por precios de productos EXTERNOS (no de Odoo):
+- "¿Cuánto cuesta X en MercadoLibre?" → EJECUTAR web_search OBLIGATORIAMENTE
+- "Precio de X" (sin contexto Odoo) → EJECUTAR web_search OBLIGATORIAMENTE  
+- "¿Estoy caro?" / "¿es buen precio?" → EJECUTAR web_search OBLIGATORIAMENTE
+- "Busca precios de X" → EJECUTAR web_search OBLIGATORIAMENTE
+
+🚨 REGLA ABSOLUTA: Si la pregunta es sobre precios en MercadoLibre o precios de mercado:
+1. SIEMPRE ejecutá web_search PRIMERO
+2. NUNCA respondas sobre precios SIN haber ejecutado web_search
+3. NUNCA inventes precios o URLs - solo usá lo que devuelve web_search
+4. Si web_search devuelve URLs en "url_verificada", COPIÁ ESAS EXACTAS URLs
+
 SI EJECUTÁS UNA HERRAMIENTA, MOSTRÁ LOS RESULTADOS. NO digas "necesito usar..." sin ejecutar.
 - "Pendientes" en compras → órdenes confirmadas sin recibir
 - "Stock bajo", "poco stock" → productos con qty_available <= 10

@@ -408,26 +408,38 @@ Ejemplos:
 
                 const productsJSON = JSON.stringify(products, null, 2)
 
-                const hybridAnswer = `${meliResult.analysis}
+                // CRITICAL: Strip any MeLi URLs from the Grounding analysis to prevent hallucinated links
+                let cleanAnalysis = meliResult.analysis
+                const meliUrlPattern = /https?:\/\/(?:www\.|articulo\.)?mercadolibre\.com\.ar\/[^\s\)\]"<>]+/gi
+                const foundUrls = cleanAnalysis.match(meliUrlPattern) || []
+                if (foundUrls.length > 0) {
+                    console.log(`[WebSearch] ⚠️ Stripping ${foundUrls.length} unverified URLs from Grounding analysis`)
+                    cleanAnalysis = cleanAnalysis.replace(meliUrlPattern, '')
+                }
+
+                // DEBUG: Log the actual products with their URLs
+                console.log('[WebSearch] Products from Serper (verified URLs):')
+                products.forEach((p, i) => {
+                    console.log(`  ${i+1}. ${p.titulo} → ${p.url_verificada}`)
+                })
+
+                const hybridAnswer = `📊 ANÁLISIS DE PRECIOS:
+${cleanAnalysis}
 
 ════════════════════════════════════════════════════════
-🛒 PRODUCTOS ENCONTRADOS (DATOS VERIFICADOS)
+🛒 PRODUCTOS VERIFICADOS (USAR SOLO ESTOS LINKS):
 ════════════════════════════════════════════════════════
 
 ${productsJSON}
 
 ════════════════════════════════════════════════════════
-⚠️ INSTRUCCIONES OBLIGATORIAS PARA TU RESPUESTA:
+⚠️ REGLAS CRÍTICAS:
 ════════════════════════════════════════════════════════
-
-1. Usá ÚNICAMENTE las URLs del campo "url_verificada" de arriba
-2. Copiá la URL EXACTA - no modifiques ni un caracter
-3. Formato de link: [Ver en MercadoLibre](URL_EXACTA)
-4. Mostrá el precio del campo "precio" si está disponible
-5. Si no hay URL para algo, NO inventes - decí que no encontraste
-6. PROHIBIDO construir URLs como "articulo.mercadolibre.com.ar/MLA-XXXXX"
-
-❌ Si inventás una URL, el usuario verá ERROR 404`
+- SOLO usá URLs del campo "url_verificada"
+- Copiá la URL EXACTA sin modificar
+- Si un precio dice "Consultar", mencioná que hay que consultar
+- NUNCA inventes URLs - usá solo las de arriba
+- Links inventados dan ERROR 404`
 
                 result = {
                     method: 'meli-hybrid',

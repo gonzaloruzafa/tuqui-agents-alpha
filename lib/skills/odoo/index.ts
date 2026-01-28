@@ -49,6 +49,11 @@ export { getAccountsReceivable, type GetAccountsReceivableInput, type GetAccount
 // Comparison Skills
 export { compareSalesPeriods, type CompareSalesPeriodsInput, type CompareSalesPeriodsOutput } from './compare-sales-periods';
 
+// New Skills
+export { getTopStockProducts } from './get-top-stock-products';
+export { getNewCustomers } from './get-new-customers';
+export { getArAging } from './get-ar-aging';
+
 // Skill array for registration
 import { getSalesTotal } from './get-sales-total';
 import { getSalesByCustomer } from './get-sales-by-customer';
@@ -74,6 +79,9 @@ import { getCashBalance } from './get-cash-balance';
 import { getAccountsReceivable } from './get-accounts-receivable';
 import { compareSalesPeriods } from './compare-sales-periods';
 import { getPendingSaleOrders } from './get-pending-sale-orders';
+import { getTopStockProducts } from './get-top-stock-products';
+import { getNewCustomers } from './get-new-customers';
+import { getArAging } from './get-ar-aging';
 
 export const odooSkills = [
   // Sales (9)
@@ -90,10 +98,11 @@ export const odooSkills = [
   getDebtByCustomer,
   getInvoicesByCustomer,
   getOverdueInvoices,
-  // Stock (3)
+  // Stock (4)
   getProductStock,
   getLowStockProducts,
   getStockValuation,
+  getTopStockProducts, // NEW
   // Payments (1)
   getPaymentsReceived,
   // Purchases (3)
@@ -107,4 +116,8 @@ export const odooSkills = [
   getCustomerBalance,
   getCashBalance, // NEW
   getAccountsReceivable, // NEW
+  // CRM/Growth (1)
+  getNewCustomers, // NEW
+  // Aging/Analysis (1)
+  getArAging, // NEW
 ];
