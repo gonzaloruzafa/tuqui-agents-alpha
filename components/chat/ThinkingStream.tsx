@@ -25,16 +25,10 @@ interface ThinkingStreamProps {
  */
 const LOGOS: Record<ThinkingSource, React.ReactNode> = {
     odoo: (
-        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-            <circle cx="12" cy="12" r="10" fill="#714B67" />
-            <path d="M12 6c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 10c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="white" />
-        </svg>
+        <img src="/logo-odoo.png" alt="Odoo" className="w-4 h-4 rounded-sm" />
     ),
     meli: (
-        <svg viewBox="0 0 24 24" className="w-4 h-4">
-            <circle cx="12" cy="12" r="10" fill="#FFE600" />
-            <path d="M12 7c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 2c.6 0 1.1.2 1.5.5L12 12l-1.5-2.5c.4-.3.9-.5 1.5-.5z" fill="#2D3277" />
-        </svg>
+        <img src="/logo-meli.png" alt="MercadoLibre" className="w-4 h-4 rounded-sm" />
     ),
     web: (
         <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
@@ -130,23 +124,24 @@ export function ThinkingStream({ thinkingText, steps, isExpanded = false, onTogg
                     {isExecuting && runningStep && (
                         <>
                             <span className="animate-pulse">⚡</span>
-                            <span className="text-gray-400">Consultando</span>
-                            {/* Show source icons */}
-                            <span className="flex items-center gap-0.5">
-                                {uniqueSources.map(source => (
-                                    <span key={source} className="opacity-70">{LOGOS[source]}</span>
-                                ))}
+                            {/* Show source icon with label */}
+                            <span className="flex items-center gap-1.5">
+                                <span className="opacity-80">{LOGOS[runningStep.source]}</span>
+                                <span className="text-gray-400">{SOURCE_NAMES[runningStep.source]}</span>
                             </span>
                         </>
                     )}
                     {allDone && (
                         <>
                             <span className="text-green-500">✓</span>
-                            <span className="text-gray-400">{completedSteps.length} consulta{completedSteps.length > 1 ? 's' : ''}</span>
-                            {/* Show source icons */}
-                            <span className="flex items-center gap-0.5">
+                            <span className="text-gray-400">vía</span>
+                            {/* Show source icons with labels */}
+                            <span className="flex items-center gap-2">
                                 {uniqueSources.map(source => (
-                                    <span key={source} className="opacity-70">{LOGOS[source]}</span>
+                                    <span key={source} className="flex items-center gap-1 opacity-80">
+                                        {LOGOS[source]}
+                                        <span className="text-gray-400 text-[10px]">{SOURCE_NAMES[source]}</span>
+                                    </span>
                                 ))}
                             </span>
                         </>

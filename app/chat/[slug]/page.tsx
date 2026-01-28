@@ -145,6 +145,7 @@ interface Message {
     content: string
     rawContent?: string
     sources?: ThinkingSource[]  // Sources used to generate this message
+    thinkingSteps?: ThinkingStep[]  // Tool execution steps for this message
 }
 
 interface Session {
@@ -360,6 +361,11 @@ export default function ChatPage() {
         if (!input.trim() || isLoading || !agent) return
         const userContent = input.trim()
         setInput('')
+        
+        // Clear previous thinking state at START of new message
+        setThinkingSteps([])
+        setThinkingText('')
+        collectedSourcesRef.current = []
 
         // Optimistic UI
         const tempUserMsg: Message = { id: Date.now().toString(), role: 'user', content: userContent }
@@ -512,6 +518,8 @@ export default function ChatPage() {
             
             // Use sources collected in ref (state may not be updated yet)
             const usedSources = [...collectedSourcesRef.current] as ThinkingSource[]
+            // Capture current thinking steps before clearing
+            const finalThinkingSteps = [...thinkingSteps]
             
             setMessages(prev => {
                 const filtered = prev.filter(m => m.id !== 'temp-bot')
@@ -520,7 +528,8 @@ export default function ChatPage() {
                     role: 'assistant', 
                     content: finalHtml, 
                     rawContent: finalText,
-                    sources: usedSources.length > 0 ? usedSources : undefined
+                    sources: usedSources.length > 0 ? usedSources : undefined,
+                    thinkingSteps: finalThinkingSteps.length > 0 ? finalThinkingSteps : undefined
                 }]
             })
 
@@ -563,8 +572,8 @@ export default function ChatPage() {
             setMessages(prev => [...prev.filter(m => m.id !== 'temp-bot'), { id: Date.now().toString(), role: 'assistant', content: errorHtml, rawContent: errorMessage }])
         } finally {
             setIsLoading(false)
-            setThinkingSteps([]) // Clear thinking steps when done
-            setThinkingText('') // Clear thinking text when done
+            // Don't clear thinkingSteps here - they're saved in the message
+            // and will be cleared at the start of the next handleSend
         }
     }
 
@@ -740,9 +749,13 @@ export default function ChatPage() {
                                                 );
                                             })()}
                                             
-                                            {/* Show sources below completed messages */}
-                                            {m.sources && m.sources.length > 0 && !isStreamingBot && (
-                                                <MessageSources sources={m.sources} />
+                                            {/* Show ThinkingStream for completed messages with steps */}
+                                            {m.thinkingSteps && m.thinkingSteps.length > 0 && !isStreamingBot && (
+                                                <ThinkingStream 
+                                                    steps={m.thinkingSteps} 
+                                                    isExpanded={false}
+                                                    onToggle={() => {}}
+                                                />
                                             )}
                                         </div>
                                     </div>

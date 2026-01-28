@@ -26,9 +26,9 @@ const google = createGoogleGenerativeAI({
 const INTERNAL_KEY = process.env.INTERNAL_TEST_KEY || 'test-key-change-in-prod'
 
 // ============================================
-// RATE LIMITING (100 requests/day per IP)
+// RATE LIMITING (higher in development for tests)
 // ============================================
-const RATE_LIMIT_MAX = 100
+const RATE_LIMIT_MAX = process.env.NODE_ENV === 'production' ? 100 : 1000
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 interface RateLimitEntry {
