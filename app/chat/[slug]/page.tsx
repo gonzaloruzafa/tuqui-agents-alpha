@@ -182,6 +182,7 @@ export default function ChatPage() {
     const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([])
     const [thinkingText, setThinkingText] = useState<string>('') // Chain of Thought text
     const [thinkingExpanded, setThinkingExpanded] = useState(false) // Collapsed by default
+    const collectedSourcesRef = useRef<ThinkingSource[]>([]) // Track sources during streaming
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [sessions, setSessions] = useState<Session[]>([])
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionIdParam)
@@ -419,6 +420,7 @@ export default function ChatPage() {
             let botText = ''
             setThinkingSteps([]) // Reset thinking steps
             setThinkingText('') // Reset thinking text
+            collectedSourcesRef.current = [] // Reset sources
 
             while (true) {
                 const { done, value } = await reader.read()
@@ -435,6 +437,10 @@ export default function ChatPage() {
                         // Parse thinking event
                         try {
                             const step = JSON.parse(line.slice(2)) as ThinkingStep
+                            // Collect sources in ref for later use
+                            if (step.source && !collectedSourcesRef.current.includes(step.source)) {
+                                collectedSourcesRef.current.push(step.source)
+                            }
                             setThinkingSteps(prev => {
                                 // Update existing step or add new one
                                 const existing = prev.findIndex(s => s.tool === step.tool && s.startedAt === step.startedAt)
@@ -486,23 +492,26 @@ export default function ChatPage() {
                 // Remove <thinking> block from displayed text
                 const displayText = botText.replace(/<thinking>[\s\S]*?<\/thinking>\s*/gi, '')
                 
-                const partialHtml = wrapTablesInScrollContainer(await marked.parse(displayText))
-                setMessages(prev => {
-                    const last = prev[prev.length - 1]
-                    if (last?.id === 'temp-bot') {
-                        return [...prev.slice(0, -1), { ...last, content: partialHtml, rawContent: displayText }]
-                    } else {
-                        return [...prev, { id: 'temp-bot', role: 'assistant', content: partialHtml, rawContent: displayText }]
-                    }
-                })
+                // Only create/update temp-bot message when there's actual visible content
+                if (displayText.trim()) {
+                    const partialHtml = wrapTablesInScrollContainer(await marked.parse(displayText))
+                    setMessages(prev => {
+                        const last = prev[prev.length - 1]
+                        if (last?.id === 'temp-bot') {
+                            return [...prev.slice(0, -1), { ...last, content: partialHtml, rawContent: displayText }]
+                        } else {
+                            return [...prev, { id: 'temp-bot', role: 'assistant', content: partialHtml, rawContent: displayText }]
+                        }
+                    })
+                }
             }
 
             // Final cleanup - remove thinking from saved/displayed text
             const finalText = botText.replace(/<thinking>[\s\S]*?<\/thinking>\s*/gi, '')
             const finalHtml = wrapTablesInScrollContainer(await marked.parse(finalText))
             
-            // Extract unique sources from thinking steps
-            const usedSources = [...new Set(thinkingSteps.map(s => s.source))] as ThinkingSource[]
+            // Use sources collected in ref (state may not be updated yet)
+            const usedSources = [...collectedSourcesRef.current] as ThinkingSource[]
             
             setMessages(prev => {
                 const filtered = prev.filter(m => m.id !== 'temp-bot')

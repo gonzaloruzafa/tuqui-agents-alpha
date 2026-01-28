@@ -77,19 +77,18 @@ export function MessageSources({ sources }: MessageSourcesProps) {
     if (displaySources.length === 0) return null
 
     return (
-        <div className="flex items-center gap-1.5 mt-2 ml-11">
-            <span className="text-[10px] text-gray-400">Fuente:</span>
+        <div className="flex items-center gap-1.5 mt-2">
+            <span className="text-[10px] text-gray-400">vía</span>
             <div className="flex items-center gap-1">
                 {displaySources.map(source => {
-                    const { icon, label, color } = SOURCE_ICONS[source]
+                    const { icon, label } = SOURCE_ICONS[source]
                     return (
                         <div 
                             key={source}
-                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${color}`}
+                            className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity cursor-default"
                             title={label}
                         >
                             {icon}
-                            <span className="text-[10px] font-medium">{label}</span>
                         </div>
                     )
                 })}
