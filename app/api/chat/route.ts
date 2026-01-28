@@ -118,30 +118,8 @@ export async function POST(req: Request) {
         // Add context persistence rule
         systemSystem += '\n\nIMPORTANTE: Estás en una conversación fluida. Usa siempre los mensajes anteriores para entender referencias como "él", "eso", "ahora", o "qué productos?". No pidas aclaraciones si el contexto ya está en el historial.'
 
-        // Add Chain of Thought / Extended Thinking instruction
-        systemSystem += `\n\n## PENSAMIENTO ESTRUCTURADO (Chain of Thought)
-ANTES de usar cualquier herramienta o responder preguntas complejas, SIEMPRE empezá tu respuesta con un bloque <thinking>...</thinking> donde:
-
-1. **Analizás** la pregunta del usuario (qué quiere saber exactamente)
-2. **Identificás** qué información necesitás obtener
-3. **Planificás** qué herramientas vas a usar y por qué
-
-Ejemplo:
-<thinking>
-El usuario pregunta por las ventas de enero 2026.
-Necesito:
-- Obtener el total de ventas del período 01/01/2026 al 31/01/2026
-- Sería útil comparar con diciembre para dar contexto
-- Mostrar los productos más vendidos del mes
-
-Voy a usar: get_sales_total, compare_sales_periods, get_top_products
-</thinking>
-
-REGLAS:
-- El bloque <thinking> es OBLIGATORIO antes de usar herramientas
-- Sé conciso pero claro en tu razonamiento (3-5 líneas)
-- Después del thinking, ejecutá las herramientas y respondé normalmente
-- Para preguntas simples sin herramientas, no uses thinking`
+        // Note: Chain of Thought is now handled by Gemini's native thinkingConfig
+        // We don't need to instruct the model to write <thinking> blocks manually
 
         // Add professional tool usage messaging
         systemSystem += '\n\nCUANDO USES HERRAMIENTAS: Comunicate de forma profesional y natural. En lugar de mensajes técnicos como "🔍 Consultando: sale.report...", usa frases amigables como:\n' +

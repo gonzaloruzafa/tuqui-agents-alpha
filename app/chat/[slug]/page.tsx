@@ -757,23 +757,16 @@ export default function ChatPage() {
                                             {getAgentIcon(agent.icon, 'sm', 'text-adhoc-violet')}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            {/* Try to render as MeLi Skill result first */}
-                                            {(() => {
-                                                const skillRender = <MeliSkillsRenderer content={m.rawContent || m.content} />;
-                                                // If MeliSkillsRenderer returns something, use it. Otherwise, use HTML.
-                                                return skillRender ? (
-                                                    <>
-                                                        {skillRender}
-                                                        <div className="bot-message text-[15px] leading-relaxed text-gray-900 overflow-x-auto min-w-0 mt-2" dangerouslySetInnerHTML={{ __html: m.content }}></div>
-                                                    </>
-                                                ) : (
-                                                    <div className="bot-message text-[15px] leading-relaxed text-gray-900 overflow-x-auto min-w-0" dangerouslySetInnerHTML={{ __html: m.content }}></div>
-                                                );
-                                            })()}
+                                            {/* Render MeLi Skill result if applicable (returns null if not) */}
+                                            <MeliSkillsRenderer content={m.rawContent || m.content} />
+                                            {/* Always render the message content */}
+                                            <div className="bot-message text-[15px] leading-relaxed text-gray-900 overflow-x-auto min-w-0" dangerouslySetInnerHTML={{ __html: m.content }}></div>
                                             
                                             {/* Show ThinkingStream for completed messages with steps */}
                                             {m.thinkingSteps && m.thinkingSteps.length > 0 && !isStreamingBot && (
-                                                <CollapsibleThinkingStream steps={m.thinkingSteps} />
+                                                <div className="mt-3">
+                                                    <CollapsibleThinkingStream steps={m.thinkingSteps} />
+                                                </div>
                                             )}
                                         </div>
                                     </div>
