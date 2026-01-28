@@ -377,16 +377,16 @@ export default function ChatPage() {
         if (!input.trim() || isLoading || !agent) return
         const userContent = input.trim()
         setInput('')
-        
-        // Clear previous thinking state at START of new message
-        setThinkingSteps([])
-        setThinkingText('')
-        collectedSourcesRef.current = []
 
         // Optimistic UI
         const tempUserMsg: Message = { id: Date.now().toString(), role: 'user', content: userContent }
         setMessages(prev => [...prev, tempUserMsg])
         setIsLoading(true)
+        
+        // Clear previous thinking state AFTER adding user message
+        setThinkingSteps([])
+        setThinkingText('')
+        collectedSourcesRef.current = []
 
         try {
             // Create session if needed
