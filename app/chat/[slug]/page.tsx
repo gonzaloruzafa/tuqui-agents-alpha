@@ -122,7 +122,7 @@ const AudioVisualizer = ({ isRecording }: { isRecording: boolean }) => {
  * Wrapper for ThinkingStream in completed messages - has its own toggle state
  */
 function CollapsibleThinkingStream({ steps, thinkingText }: { steps: ThinkingStep[], thinkingText?: string }) {
-    const [isExpanded, setIsExpanded] = useState(false)
+    const [isExpanded, setIsExpanded] = useState(true) // Expanded by default for completed messages
     return (
         <ThinkingStream 
             steps={steps}
@@ -768,17 +768,17 @@ export default function ChatPage() {
                                             {getAgentIcon(agent.icon, 'sm', 'text-adhoc-violet')}
                                         </div>
                                         <div className="min-w-0 flex-1">
+                                            {/* Show ThinkingStream for completed messages with steps - BEFORE content */}
+                                            {m.thinkingSteps && m.thinkingSteps.length > 0 && !isStreamingBot && (
+                                                <div className="mb-3">
+                                                    <CollapsibleThinkingStream steps={m.thinkingSteps} />
+                                                </div>
+                                            )}
+                                            
                                             {/* Render MeLi Skill result if applicable (returns null if not) */}
                                             <MeliSkillsRenderer content={m.rawContent || m.content} />
                                             {/* Always render the message content */}
                                             <div className="bot-message text-[15px] leading-relaxed text-gray-900 overflow-x-auto min-w-0" dangerouslySetInnerHTML={{ __html: m.content }}></div>
-                                            
-                                            {/* Show ThinkingStream for completed messages with steps */}
-                                            {m.thinkingSteps && m.thinkingSteps.length > 0 && !isStreamingBot && (
-                                                <div className="mt-3">
-                                                    <CollapsibleThinkingStream steps={m.thinkingSteps} />
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 ) : (
