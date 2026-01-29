@@ -460,6 +460,7 @@ export default function ChatPage() {
                         // Parse tool execution event
                         try {
                             const step = JSON.parse(line.slice(2)) as ThinkingStep
+                            console.log('[Chat] 🔧 Tool step received:', step.tool, step.status)
                             // Collect sources in ref for later use
                             if (step.source && !collectedSourcesRef.current.includes(step.source)) {
                                 collectedSourcesRef.current.push(step.source)
@@ -548,6 +549,8 @@ export default function ChatPage() {
             // Use refs collected during streaming (state may not be updated yet)
             const usedSources = [...collectedSourcesRef.current] as ThinkingSource[]
             const finalThinkingSteps = [...collectedStepsRef.current]
+            
+            console.log('[Chat] 💾 Saving message with thinking steps:', finalThinkingSteps.length, finalThinkingSteps.map(s => s.tool))
             
             setMessages(prev => {
                 const filtered = prev.filter(m => m.id !== 'temp-bot')
